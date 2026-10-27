@@ -21,7 +21,12 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
   // Sparkle is started only when Info.plist has a real EdDSA public key: with the
   // DAOHUI_SPARKLE_PUBLIC_KEY placeholder (local and unsigned CI builds) the
   // updater would refuse to start and show an error at every launch.
-  let updateController = SPUStandardUpdaterController(startingUpdater: DaoHuiBrand.sparkleConfigured, updaterDelegate: nil, userDriverDelegate: nil)
+  // This object is the user driver's delegate (upstream passes nil, so the
+  // methods below never ran): an input method is an accessory app, and
+  // without .regular activation Sparkle's windows open behind the front app.
+  // Lazy because `self` is needed; created at launch, see
+  // applicationWillFinishLaunching.
+  lazy var updateController = SPUStandardUpdaterController(startingUpdater: DaoHuiBrand.sparkleConfigured, updaterDelegate: nil, userDriverDelegate: self)
   var supportsGentleScheduledUpdateReminders: Bool {
     true
   }
@@ -58,6 +63,7 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
   func applicationWillFinishLaunching(_ notification: Notification) {
     panel = SquirrelPanel(position: .zero)
     addObservers()
+    _ = updateController  // start the updater (scheduled checks) at launch
   }
 
   func applicationWillTerminate(_ notification: Notification) {
@@ -90,6 +96,15 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
   func checkForUpdates() {
     if updateController.updater.canCheckForUpdates {
       print("Checking for updates")
+      // Asked for from the input menu: come to the front, so that the
+      // result (an update, "up to date" or an error) is seen at once.
+      // standardUserDriverWillFinishUpdateSession goes back to .accessory.
+      NSApp.setActivationPolicy(.regular)
+      if #available(macOS 14.0, *) {
+        NSApp.activate()
+      } else {
+        NSApp.activate(ignoringOtherApps: true)
+      }
       updateController.updater.checkForUpdates()
     } else {
       print("Cannot check for updates")

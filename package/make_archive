@@ -73,6 +73,10 @@ pub_date=$(date -R)
 # for the settings app (app/daohui-settings in rime-asus-zhuyin), which
 # installs a .pkg only after checking this hash
 pkg_sha256=$(shasum -a 256 "${target_pkg}" | awk '{print $1}')
+# Shown in Sparkle's update window. Embedded rather than a
+# sparkle:releaseNotesLink: a link loads the whole GitHub page into that
+# small view. DAOHUI_RELEASE_NOTES_HTML (a short HTML fragment) overrides it.
+release_notes_html="${DAOHUI_RELEASE_NOTES_HTML:-<p>島輝 ${app_version}</p><p><a href=\"${release_notes_url}\">完整的更新說明</a></p>}"
 
 # release channel (the testing channel of DaoHui uses the same feed)
 appcast_file='appcast-macos.xml'
@@ -88,7 +92,7 @@ cat > "${appcast_file}" << EOF
     <language>zh</language>
     <item>
       <title>島輝 ${app_version}</title>
-      <sparkle:releaseNotesLink>${release_notes_url}</sparkle:releaseNotesLink>
+      <description><![CDATA[${release_notes_html}]]></description>
       <sparkle:minimumSystemVersion>13.0.0</sparkle:minimumSystemVersion>
       <pubDate>${pub_date}</pubDate>
       <enclosure url="${download_url}"
