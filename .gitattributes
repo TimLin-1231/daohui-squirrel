@@ -1,0 +1,10 @@
+# DaoHui: keep LF line endings in every checkout, also on Windows (the build
+# runs on macOS; shell scripts and the Xcode project must not get CRLF).
+* text=auto eol=lf
+
+# Binary assets
+*.pdf binary
+*.png binary
+*.icns binary
+*.ocd2 binary
+*.gram binary
