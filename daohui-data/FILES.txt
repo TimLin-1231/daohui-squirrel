@@ -17,6 +17,7 @@ lua\asus_quick.lua
 lua\asus_shift.lua
 lua\asus_shortcuts.lua
 lua\asus_symbols.lua
+lua\asus_sync.lua
 lua\asus_tab.lua
 lua\asus_tw.lua
 lua\asus_typo.lua
@@ -39,5 +40,6 @@ shortcuts.example.txt
 terra_pinyin.asus.dict.yaml
 terra_pinyin.mcb.dict.yaml
 terra_pinyin.personal.dict.yaml
+terra_pinyin.synced.dict.yaml
 terra_pinyin.tw.dict.yaml
 weasel.yaml
