@@ -146,6 +146,9 @@ clean-sparkle:
 
 .PHONY: package archive
 
+# DEV_ID="Name (TEAMID)" signs with the "Developer ID Application/Installer"
+# identities and notarizes with the notarytool keychain profile named DEV_ID
+# (NOTARY_KEYCHAIN: the keychain holding it, if not the default one).
 $(PACKAGE):
 ifdef DEV_ID
 	bash package/sign_app "$(DEV_ID)" "$(DERIVED_DATA_PATH)"
@@ -155,7 +158,7 @@ ifdef DEV_ID
 	productsign --sign "Developer ID Installer: $(DEV_ID)" package/DaoHui.pkg package/DaoHui-signed.pkg
 	rm package/DaoHui.pkg
 	mv package/DaoHui-signed.pkg package/DaoHui.pkg
-	xcrun notarytool submit package/DaoHui.pkg --keychain-profile "$(DEV_ID)" --wait
+	xcrun notarytool submit package/DaoHui.pkg --keychain-profile "$(DEV_ID)" $(if $(NOTARY_KEYCHAIN),--keychain "$(NOTARY_KEYCHAIN)") --wait
 	xcrun stapler staple package/DaoHui.pkg
 endif
 

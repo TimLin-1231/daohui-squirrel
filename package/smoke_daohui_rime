@@ -1,0 +1,79 @@
+#!/bin/bash
+# DaoHui: run the built DaoHui.app's own librime on its SharedSupport data,
+# without installing anything (macOS; used by the CI workflow).
+#
+#   smoke_daohui_rime deploy <DaoHui.app> <work dir>
+#       rime_deployer --build with an empty user folder, as on a first
+#       start: fails unless asus_zhuyin and its dictionary compile.
+#
+#   smoke_daohui_rime console <DaoHui.app> <work dir> <rime_api_console>
+#       Types a few keys through librime's rime_api_console (from the
+#       prebuilt librime, loading the app's librime.1.dylib and its
+#       rime-plugins) with SharedSupport as the data folder, so the Lua
+#       scripts run on macOS. Prints the result; checks only that it ran.
+
+set -euo pipefail
+
+mode="${1:?usage: smoke_daohui_rime deploy|console <DaoHui.app> <work dir> [<rime_api_console>]}"
+app="$(cd "${2:?DaoHui.app}" && pwd)"
+work="${3:?work dir}"
+shared="${app}/Contents/SharedSupport"
+
+rm -rf "${work}"
+mkdir -p "${work}"
+
+case "${mode}" in
+deploy)
+    user="${work}/user"
+    mkdir -p "${user}"
+    start=$(date +%s)
+    "${app}/Contents/MacOS/rime_deployer" --build "${user}" "${shared}" "${user}/build"
+    echo "rime_deployer --build took $(( $(date +%s) - start )) s"
+    ls -l "${user}/build"
+    status=0
+    for f in default.yaml asus_zhuyin.schema.yaml asus_zhuyin.prism.bin terra_pinyin.asus.table.bin; do
+        if [ -s "${user}/build/${f}" ]; then
+            echo "ok    build/${f}"
+        else
+            echo "FAIL  build/${f} was not built"
+            status=1
+        fi
+    done
+    if grep -q 'schema: asus_zhuyin' "${user}/build/default.yaml" 2>/dev/null; then
+        echo "ok    schema_list of the deployed default.yaml has asus_zhuyin"
+    else
+        echo "FAIL  asus_zhuyin is not in the deployed schema_list"
+        status=1
+    fi
+    exit "${status}"
+    ;;
+console)
+    console="${4:?rime_api_console}"
+    [ -x "${console}" ] || { echo "no rime_api_console at ${console}; skipped"; exit 0; }
+    cp -R "${shared}/." "${work}/"
+    cd "${work}"
+    # ㄋㄧˇ ㄏㄠˇ (你好) in the Dachen layout; then the expanded list.
+    printf 'su3cl3\n{Down}\n' > keys.txt
+    # rime_api_console uses the current folder as shared and user data folder;
+    # DYLD_LIBRARY_PATH makes it load the app's librime (and so the app's
+    # rime-plugins). perl's alarm stands in for timeout(1).
+    DYLD_LIBRARY_PATH="${app}/Contents/Frameworks" \
+        perl -e 'alarm 600; exec @ARGV' "${console}" < keys.txt > console.out 2> console.err || {
+        echo "rime_api_console failed:"; tail -50 console.err; cat console.out; exit 1; }
+    cat console.out
+    echo "--- stderr (last 40 lines)"
+    tail -40 console.err
+    if grep -qi 'lua' console.err && grep -qiE 'error|fail' console.err; then
+        echo "warn  Lua messages in stderr (see above)"
+    fi
+    if grep -q '你好' console.out; then
+        echo "ok    你好 among the candidates"
+    else
+        echo "warn  你好 not found in the console output"
+    fi
+    ;;
+*)
+    echo "unknown mode ${mode}" >&2
+    exit 2
+    ;;
+esac

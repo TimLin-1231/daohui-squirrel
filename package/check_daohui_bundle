@@ -1,0 +1,162 @@
+#!/bin/bash
+# DaoHui: sanity checks of a built DaoHui.app and DaoHui.pkg (macOS only;
+# run by .github/workflows/daohui-macos.yml after the build).
+#
+# usage: check_daohui_bundle <DaoHui.app> [<DaoHui.pkg>]
+#
+# Fails when the bundle still carries a stock Squirrel identity, misses an
+# architecture of $ARCHS (default: arm64 x86_64), a Rime plugin, the DaoHui
+# data or the stock data the schema needs.
+
+set -uo pipefail
+
+app="${1:?usage: check_daohui_bundle <DaoHui.app> [<DaoHui.pkg>]}"
+pkg="${2:-}"
+root="$(cd "$(dirname "$0")/.." && pwd)"
+plist="${app}/Contents/Info.plist"
+fail=0
+
+ok() { echo "ok    $*"; }
+bad() { echo "FAIL  $*"; fail=1; }
+warn() { echo "warn  $*"; }
+pb() { /usr/libexec/PlistBuddy -c "Print :$1" "$2" 2>/dev/null; }
+expect() {  # name actual expected
+    if [ "$2" = "$3" ]; then ok "$1 = $2"; else bad "$1 = '$2', expected '$3'"; fi
+}
+
+id='io.github.timlin-1231.inputmethod.DaoHui'
+expect CFBundleIdentifier "$(pb CFBundleIdentifier "${plist}")" "${id}"
+expect CFBundleExecutable "$(pb CFBundleExecutable "${plist}")" DaoHui
+expect CFBundleName "$(pb CFBundleName "${plist}")" DaoHui
+expect TISInputSourceID "$(pb TISInputSourceID "${plist}")" "${id}"
+expect "input mode" "$(pb "ComponentInputModeDict:tsInputModeListKey:${id}.Hant:TISInputSourceID" "${plist}")" "${id}.Hant"
+expect InputMethodConnectionName "$(pb InputMethodConnectionName "${plist}")" DaoHui_Connection
+expect InputMethodServerControllerClass "$(pb InputMethodServerControllerClass "${plist}")" DaoHui.SquirrelInputController
+expect InputMethodServerDelegateClass "$(pb InputMethodServerDelegateClass "${plist}")" DaoHui.SquirrelInputController
+expect SUFeedURL "$(pb SUFeedURL "${plist}")" "$(pb SUFeedURL "${root}/resources/Info.plist")"
+echo "info  CFBundleVersion = $(pb CFBundleVersion "${plist}")"
+key="$(pb SUPublicEDKey "${plist}")"
+if [ "${key}" = DAOHUI_SPARKLE_PUBLIC_KEY ]; then
+    warn "SUPublicEDKey is the placeholder: Sparkle updates are off in this build"
+else
+    ok "SUPublicEDKey is set"
+fi
+# (grep -a: compiled plists and strings files are binary)
+left="$( { grep -ral --include='*.plist' --include='*.strings' 'im\.rime\.inputmethod\.Squirrel' "${app}/Contents/Resources" "${plist}";
+          grep -al 'im\.rime\.inputmethod\.Squirrel' "${app}/Contents/MacOS/DaoHui"; } 2>/dev/null | tr '\n' ' ')"
+if [ -n "${left}" ]; then
+    bad "stock Squirrel ids left in: ${left}"
+else
+    ok "no im.rime.inputmethod.Squirrel in Info.plist, strings files or the executable"
+fi
+zh="$(find "${app}/Contents/Resources" -path '*zh-Hant.lproj/InfoPlist.strings' | head -1)"
+if [ -n "${zh}" ] && plutil -p "${zh}" | grep -q '島輝'; then
+    ok "zh-Hant InfoPlist.strings names 島輝"
+else
+    bad "zh-Hant InfoPlist.strings with 島輝 not found"
+fi
+
+archs="$(lipo -archs "${app}/Contents/MacOS/DaoHui" 2>/dev/null)"
+for a in ${ARCHS:-arm64 x86_64}; do
+    case " ${archs} " in
+        *" ${a} "*) ok "DaoHui executable has ${a}" ;;
+        *) bad "DaoHui executable lacks ${a} (has: ${archs})" ;;
+    esac
+done
+
+for f in \
+    Contents/MacOS/rime_deployer \
+    Contents/MacOS/rime_dict_manager \
+    Contents/MacOS/rime-install \
+    Contents/Frameworks/librime.1.dylib \
+    Contents/Frameworks/rime-plugins/librime-lua.dylib \
+    Contents/Frameworks/rime-plugins/librime-octagram.dylib \
+    Contents/Frameworks/rime-plugins/librime-predict.dylib \
+    Contents/Frameworks/Sparkle.framework \
+    Contents/Resources/daohui.pdf \
+    Contents/Resources/LICENSE.txt \
+    Contents/SharedSupport/squirrel.yaml \
+    Contents/SharedSupport/default.yaml \
+    Contents/SharedSupport/key_bindings.yaml \
+    Contents/SharedSupport/punctuation.yaml \
+    Contents/SharedSupport/symbols.yaml \
+    Contents/SharedSupport/essay.txt \
+    Contents/SharedSupport/bopomofo.schema.yaml \
+    Contents/SharedSupport/bopomofo_tw.schema.yaml \
+    Contents/SharedSupport/zhuyin.yaml \
+    Contents/SharedSupport/terra_pinyin.dict.yaml \
+    Contents/SharedSupport/stroke.dict.yaml \
+    Contents/SharedSupport/opencc/t2s.json \
+    Contents/SharedSupport/opencc/t2tw.json
+do
+    if [ -e "${app}/${f}" ]; then ok "${f}"; else bad "missing ${f}"; fi
+done
+for f in Contents/Resources/Assets.car Contents/Resources/DaoHui.icns; do
+    if [ -e "${app}/${f}" ]; then ok "${f}"; else warn "missing ${f} (app icon)"; fi
+done
+lipo -archs "${app}/Contents/Frameworks/librime.1.dylib" 2>/dev/null | sed 's/^/info  librime.1.dylib archs: /'
+
+# DaoHui data: every file of FILES.txt (except weasel.yaml), byte for byte
+n=0
+while IFS= read -r line || [ -n "${line}" ]; do
+    rel="${line%$'\r'}"
+    rel="${rel//\\//}"
+    [ -n "${rel}" ] || continue
+    [ "${rel}" = weasel.yaml ] && continue
+    if cmp -s "${root}/daohui-data/${rel}" "${app}/Contents/SharedSupport/${rel}"; then
+        n=$((n + 1))
+    else
+        bad "SharedSupport/${rel} differs from daohui-data/ or is missing"
+    fi
+done < "${root}/daohui-data/FILES.txt"
+ok "${n} DaoHui data files in SharedSupport (default.yaml is DaoHui's)"
+if grep -q 'DaoHui product defaults' "${app}/Contents/SharedSupport/squirrel.yaml"; then
+    ok "squirrel.yaml carries the DaoHui patch"
+else
+    bad "squirrel.yaml lacks the DaoHui patch"
+fi
+for f in weasel.yaml FILES.txt; do
+    if [ -e "${app}/Contents/SharedSupport/${f}" ]; then bad "${f} should not be installed"; fi
+done
+
+if codesign --verify --deep --strict "${app}" 2>/dev/null; then
+    ok "codesign --verify --deep --strict"
+else
+    warn "codesign --verify failed: $(codesign --verify --deep --strict "${app}" 2>&1 | tail -1)"
+fi
+codesign -dv "${app}" 2>&1 | grep -E '^(Identifier|Signature|Authority|TeamIdentifier)' | sed 's/^/info  /'
+
+if [ -n "${pkg}" ]; then
+    tmp="$(mktemp -d)"
+    if pkgutil --expand-full "${pkg}" "${tmp}/x"; then
+        info="${tmp}/x/DaoHui-component.pkg/PackageInfo"
+        if grep -q "identifier=\"${id}\"" "${info}" && grep -q 'install-location="/Library/Input Methods"' "${info}"; then
+            ok "pkg: component ${id} installs to /Library/Input Methods"
+        else
+            bad "pkg: unexpected PackageInfo: $(head -c 400 "${info}")"
+        fi
+        if [ -f "${tmp}/x/DaoHui-component.pkg/Scripts/postinstall" ]; then ok "pkg: postinstall"; else bad "pkg: no postinstall"; fi
+        if grep -q 'hostArchitectures="arm64,x86_64"' "${tmp}/x/Distribution"; then ok "pkg: hostArchitectures"; else bad "pkg: Distribution lacks hostArchitectures"; fi
+        payload="${tmp}/x/DaoHui-component.pkg/Payload"
+        if [ -x "${payload}/DaoHui.app/Contents/MacOS/DaoHui" ]; then
+            ok "pkg: payload has DaoHui.app"
+        else
+            bad "pkg: DaoHui.app/Contents/MacOS/DaoHui not in the payload ($(ls "${payload}" 2>&1 | tr '\n' ' '))"
+        fi
+        if [ -e "${payload}/DaoHui.app/Contents/SharedSupport/asus_zhuyin.schema.yaml" ]; then
+            ok "pkg: payload has the DaoHui schema"
+        else
+            bad "pkg: payload lacks SharedSupport/asus_zhuyin.schema.yaml"
+        fi
+    else
+        bad "pkgutil --expand failed"
+    fi
+    pkgutil --check-signature "${pkg}" | head -3 | sed 's/^/info  /'
+    rm -rf "${tmp}"
+fi
+
+if [ "${fail}" -ne 0 ]; then
+    echo "check_daohui_bundle: FAILED"
+    exit 1
+fi
+echo "check_daohui_bundle: all checks passed"

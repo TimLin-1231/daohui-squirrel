@@ -1,0 +1,193 @@
+# 島輝 DaoHui for macOS: build, package and (on v* tags) release.
+#
+# Runs on pushes to the daohui branch, on v* tags and by hand. Builds a
+# universal (arm64 + x86_64) Release of DaoHui.app with the prebuilt librime
+# 1.16.0 (+ lua, octagram, predict plugins) and Sparkle 2.6.2 that
+# action-install.sh downloads, makes an unsigned DaoHui.pkg and uploads it as
+# a workflow artifact. On a v* tag the .pkg is attached to a GitHub release.
+#
+# Optional secrets (all unset = unsigned build; see DAOHUI.md):
+#   MACOS_CERTIFICATE_P12, MACOS_CERTIFICATE_PASSWORD, MACOS_DEV_ID,
+#   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD   Developer ID signing and
+#                                                 notarization (all six)
+#   SPARKLE_PUBLIC_ED_KEY                          replaces the
+#                                                 DAOHUI_SPARKLE_PUBLIC_KEY
+#                                                 placeholder in Info.plist
+#   SPARKLE_PRIVATE_ED_KEY                         signs the update and writes
+#                                                 appcast-macos.xml (tags)
+name: DaoHui macOS
+
+on:
+  push:
+    branches:
+      - daohui
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write  # gh release create/upload on tags (GITHUB_TOKEN)
+
+concurrency:
+  group: daohui-macos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    # macos-15 (Apple silicon) is the image Squirrel 1.1.2's own CI used
+    # (macos-latest in January 2026); macos-14 was retired in July 2026.
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      ARCHS: 'arm64 x86_64'
+      # Stock data only (plum :preset). No octagram data: DaoHui's language
+      # model is downloaded into the user folder later.
+      SQUIRREL_BUNDLED_RECIPES: ''
+      # Squirrel 1.1.2: the fork point, for the build number.
+      DAOHUI_UPSTREAM_COMMIT: 876adebaf2f612951dcdca8a591de65401222b9a
+      DAOHUI_UPSTREAM_VERSION: '1.1.2'
+      HAVE_SIGNING: ${{ secrets.MACOS_CERTIFICATE_P12 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_DEV_ID != '' && secrets.APPLE_ID != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_APP_PASSWORD != '' }}
+      HAVE_SPARKLE_PUBLIC_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY != '' }}
+      HAVE_SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_ED_KEY != '' }}
+      APP: build/Build/Products/Release/DaoHui.app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0     # build number = commits since Squirrel 1.1.2
+          submodules: true   # librime (headers), plum, Sparkle
+
+      - name: Show the build machine
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcode-select -p
+          uname -m
+
+      - name: Version
+        run: |
+          if git cat-file -e "${DAOHUI_UPSTREAM_COMMIT}^{commit}" 2>/dev/null; then
+            n="$(git rev-list --count "${DAOHUI_UPSTREAM_COMMIT}..HEAD")"
+          else
+            echo "::warning::Squirrel ${DAOHUI_UPSTREAM_VERSION} (${DAOHUI_UPSTREAM_COMMIT}) is not in the history; counting all commits"
+            n="$(git rev-list --count HEAD)"
+          fi
+          version="${DAOHUI_UPSTREAM_VERSION}.${n}"
+          echo "DAOHUI_VERSION=${version}" >> "${GITHUB_ENV}"
+          echo "DaoHui ${version} ($(git describe --always --tags))"
+
+      - name: Lint (advisory)
+        continue-on-error: true
+        run: |
+          brew install swiftlint
+          swiftlint
+
+      - name: Sparkle public key
+        if: env.HAVE_SPARKLE_PUBLIC_KEY == 'true'
+        env:
+          SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey ${SPARKLE_PUBLIC_ED_KEY}" resources/Info.plist
+          echo "SUPublicEDKey set from secrets"
+
+      - name: Import signing certificates
+        if: env.HAVE_SIGNING == 'true'
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_DEV_ID: ${{ secrets.MACOS_DEV_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          keychain="${RUNNER_TEMP}/daohui-signing.keychain-db"
+          password="$(uuidgen)"
+          security create-keychain -p "${password}" "${keychain}"
+          security set-keychain-settings -lut 21600 "${keychain}"
+          security unlock-keychain -p "${password}" "${keychain}"
+          printf '%s' "${MACOS_CERTIFICATE_P12}" | base64 --decode > "${RUNNER_TEMP}/daohui.p12"
+          security import "${RUNNER_TEMP}/daohui.p12" -k "${keychain}" -P "${MACOS_CERTIFICATE_PASSWORD}" \
+            -T /usr/bin/codesign -T /usr/bin/productsign
+          rm -f "${RUNNER_TEMP}/daohui.p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "${password}" "${keychain}" > /dev/null
+          security list-keychains -d user -s "${keychain}" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v "${keychain}"
+          xcrun notarytool store-credentials "${MACOS_DEV_ID}" --apple-id "${APPLE_ID}" \
+            --team-id "${APPLE_TEAM_ID}" --password "${APPLE_APP_PASSWORD}" --keychain "${keychain}"
+          # make package then signs (package/sign_app, productsign) and notarizes
+          echo "DEV_ID=${MACOS_DEV_ID}" >> "${GITHUB_ENV}"
+          echo "NOTARY_KEYCHAIN=${keychain}" >> "${GITHUB_ENV}"
+
+      - name: Build DaoHui.app (universal Release) and DaoHui.pkg
+        run: ./action-build.sh package
+
+      - name: Check the bundle and the package
+        run: bash package/check_daohui_bundle "${APP}" package/DaoHui.pkg
+
+      - name: Collect the package
+        run: |
+          mkdir -p dist
+          cp package/DaoHui.pkg "dist/DaoHui-${DAOHUI_VERSION}.pkg"
+          shasum -a 256 dist/*.pkg | tee dist/SHA256SUMS.txt
+
+      - name: Upload the package
+        uses: actions/upload-artifact@v6
+        with:
+          name: DaoHui-${{ env.DAOHUI_VERSION }}-macOS
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Deploy test (librime of the app, empty user folder)
+        run: bash package/smoke_daohui_rime deploy "${APP}" "${RUNNER_TEMP}/daohui-deploy"
+
+      - name: Lua test (rime_api_console, informational)
+        continue-on-error: true
+        run: bash package/smoke_daohui_rime console "${APP}" "${RUNNER_TEMP}/daohui-console" librime/dist/bin/rime_api_console
+
+      - name: Sparkle appcast
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAVE_SPARKLE_PRIVATE_KEY == 'true'
+        env:
+          SPARKLE_PRIVATE_ED_KEY: ${{ secrets.SPARKLE_PRIVATE_ED_KEY }}
+          DAOHUI_RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cp download/bin/sign_update package/sign_update
+          key="${RUNNER_TEMP}/sparkle_ed_key"
+          (umask 077; printf '%s' "${SPARKLE_PRIVATE_ED_KEY}" > "${key}")
+          SPARKLE_ED_KEY_FILE="${key}" bash package/make_archive
+          rm -f "${key}"
+          test -s package/appcast-macos.xml
+          cp package/appcast-macos.xml dist/
+          echo "Publish dist/appcast-macos.xml at the SUFeedURL of Info.plist."
+
+      - name: GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [ "${HAVE_SIGNING}" = true ]; then
+            signing='Signed with Developer ID and notarized.'
+            prerelease=()
+          else
+            signing='Not signed or notarized: after downloading, open it once, then allow it in System Settings > Privacy & Security (or run `xattr -dr com.apple.quarantine DaoHui-*.pkg`).'
+            prerelease=(--prerelease)
+          fi
+          cat > "${RUNNER_TEMP}/notes.md" <<EOF
+          島輝 DaoHui for macOS ${DAOHUI_VERSION}, based on Squirrel (鼠鬚管) ${DAOHUI_UPSTREAM_VERSION} by the RIME team.
+
+          - Universal (Apple silicon and Intel), macOS 13 or later; installs /Library/Input Methods/DaoHui.app next to any stock Squirrel.
+          - ${signing}
+          - After installing, log out and in, then add 島輝 in System Settings > Keyboard > Input Sources.
+          - Built from ${GITHUB_SHA} by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          EOF
+          if gh release view "${tag}" > /dev/null 2>&1; then
+            gh release upload "${tag}" dist/* --clobber
+          else
+            gh release create "${tag}" dist/* --title "島輝 DaoHui for macOS ${tag}" \
+              --notes-file "${RUNNER_TEMP}/notes.md" --verify-tag "${prerelease[@]}"
+          fi
+
+      - name: Remove the signing keychain
+        if: always() && env.HAVE_SIGNING == 'true'
+        run: security delete-keychain "${RUNNER_TEMP}/daohui-signing.keychain-db" || true
