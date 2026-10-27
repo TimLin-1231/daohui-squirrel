@@ -6,26 +6,29 @@
 #       rime_deployer --build with an empty user folder, as on a first
 #       start: fails unless asus_zhuyin and its dictionary compile.
 #
-#   smoke_daohui_rime console <DaoHui.app> <work dir> <rime_api_console>
-#       Types a few keys through librime's rime_api_console (from the
-#       prebuilt librime, loading the app's librime.1.dylib and its
-#       rime-plugins) with SharedSupport as the data folder, so the Lua
-#       scripts run on macOS. Prints the result; checks only that it ran.
+#   smoke_daohui_rime keys <DaoHui.app> <work dir>
+#       Builds tools/rime_keys.c against the app's librime.1.dylib (so
+#       librime also loads the app's rime-plugins) and types a few key
+#       sequences into asus_zhuyin with an empty user folder: the Lua scripts
+#       run on macOS's librime-lua. Fails if librime cannot start or the
+#       schema cannot be selected; prints what the schema shows and any Lua
+#       errors from the log.
 
 set -euo pipefail
 
-mode="${1:?usage: smoke_daohui_rime deploy|console <DaoHui.app> <work dir> [<rime_api_console>]}"
+mode="${1:?usage: smoke_daohui_rime deploy|keys <DaoHui.app> <work dir>}"
 app="$(cd "${2:?DaoHui.app}" && pwd)"
 work="${3:?work dir}"
+root="$(cd "$(dirname "$0")/.." && pwd)"
 shared="${app}/Contents/SharedSupport"
+frameworks="${app}/Contents/Frameworks"
 
 rm -rf "${work}"
-mkdir -p "${work}"
+mkdir -p "${work}/user" "${work}/log"
 
 case "${mode}" in
 deploy)
     user="${work}/user"
-    mkdir -p "${user}"
     start=$(date +%s)
     "${app}/Contents/MacOS/rime_deployer" --build "${user}" "${shared}" "${user}/build"
     echo "rime_deployer --build took $(( $(date +%s) - start )) s"
@@ -47,30 +50,31 @@ deploy)
     fi
     exit "${status}"
     ;;
-console)
-    console="${4:?rime_api_console}"
-    [ -x "${console}" ] || { echo "no rime_api_console at ${console}; skipped"; exit 0; }
-    cp -R "${shared}/." "${work}/"
-    cd "${work}"
-    # ㄋㄧˇ ㄏㄠˇ (你好) in the Dachen layout; then the expanded list.
-    printf 'su3cl3\n{Down}\n' > keys.txt
-    # rime_api_console uses the current folder as shared and user data folder;
-    # DYLD_LIBRARY_PATH makes it load the app's librime (and so the app's
-    # rime-plugins). perl's alarm stands in for timeout(1).
-    DYLD_LIBRARY_PATH="${app}/Contents/Frameworks" \
-        perl -e 'alarm 600; exec @ARGV' "${console}" < keys.txt > console.out 2> console.err || {
-        echo "rime_api_console failed:"; tail -50 console.err; cat console.out; exit 1; }
-    cat console.out
-    echo "--- stderr (last 40 lines)"
-    tail -40 console.err
-    if grep -qi 'lua' console.err && grep -qiE 'error|fail' console.err; then
-        echo "warn  Lua messages in stderr (see above)"
+keys)
+    tool="${work}/rime_keys"
+    clang -std=c11 -Wall -Wextra -o "${tool}" "${root}/tools/rime_keys.c" \
+        -I "${root}/librime/src" -L "${frameworks}" -lrime.1 -Wl,-rpath,"${frameworks}"
+    # ㄋㄧˇ ㄏㄠˇ (你好) in the Dachen layout, then Escape; an English word.
+    start=$(date +%s)
+    status=0
+    perl -e 'alarm 900; exec @ARGV' "${tool}" "${shared}" "${work}/user" "${work}/log" asus_zhuyin \
+        'su3cl3' '{Escape}' 'hello' '{Escape}' > "${work}/keys.out" || status=$?
+    echo "rime_keys took $(( $(date +%s) - start )) s, exit ${status}"
+    cat "${work}/keys.out"
+    echo "--- log files"
+    ls -l "${work}/log" || true
+    if ls "${work}/log"/*.ERROR* > /dev/null 2>&1; then
+        echo "--- errors logged by librime (last 60 lines)"
+        tail -60 "${work}/log"/*.ERROR*
     fi
-    if grep -q '你好' console.out; then
-        echo "ok    你好 among the candidates"
+    lua_errors="$(cat "${work}/log"/*.WARNING* 2>/dev/null | grep -ci 'lua' || true)"
+    echo "info  log lines mentioning Lua at WARNING or above: ${lua_errors}"
+    if grep -q '你好' "${work}/keys.out"; then
+        echo "ok    你好 is offered for su3cl3"
     else
-        echo "warn  你好 not found in the console output"
+        echo "warn  你好 not offered for su3cl3"
     fi
+    exit "${status}"
     ;;
 *)
     echo "unknown mode ${mode}" >&2

@@ -141,9 +141,9 @@ jobs:
       - name: Deploy test (librime of the app, empty user folder)
         run: bash package/smoke_daohui_rime deploy "${APP}" "${RUNNER_TEMP}/daohui-deploy"
 
-      - name: Lua test (rime_api_console, informational)
+      - name: Typing test with the Lua scripts (informational)
         continue-on-error: true
-        run: bash package/smoke_daohui_rime console "${APP}" "${RUNNER_TEMP}/daohui-console" librime/dist/bin/rime_api_console
+        run: bash package/smoke_daohui_rime keys "${APP}" "${RUNNER_TEMP}/daohui-keys"
 
       - name: Sparkle appcast
         if: startsWith(github.ref, 'refs/tags/v') && env.HAVE_SPARKLE_PRIVATE_KEY == 'true'
