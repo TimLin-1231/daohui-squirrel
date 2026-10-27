@@ -37,7 +37,7 @@ done < "${manifest}"
 [ "${#listed[@]}" -gt 0 ] || die "FILES.txt lists no files"
 
 # Every file of the folder must be in the manifest (catches a file added
-# without regenerating FILES.txt).
+# without regenerating FILES.txt). Dot files (.DS_Store) are ignored.
 while IFS= read -r path; do
     rel="${path#${src}/}"
     case "${rel}" in FILES.txt|README.md) continue ;; esac
@@ -46,7 +46,7 @@ while IFS= read -r path; do
         if [ "${x}" = "${rel}" ]; then found=yes; break; fi
     done
     [ "${found}" = yes ] || die "daohui-data/${rel} is not listed in FILES.txt"
-done < <(find "${src}" -type f | sort)
+done < <(find "${src}" -type f ! -name ".*" | sort)
 
 installed() {
     case "$1" in weasel.yaml|FILES.txt|README.md) return 1 ;; esac
