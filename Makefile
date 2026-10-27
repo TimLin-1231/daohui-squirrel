@@ -109,11 +109,13 @@ BUILD_SETTINGS += COMPILER_INDEX_STORE_ENABLE=YES
 release: $(DEPS_CHECK)
 	mkdir -p $(DERIVED_DATA_PATH)
 	bash package/add_data_files
+	bash package/copy_daohui_data --override-plum data/plum
 	xcodebuild -project Squirrel.xcodeproj -configuration Release -scheme Squirrel -derivedDataPath $(DERIVED_DATA_PATH) $(BUILD_SETTINGS) build
 
 debug: $(DEPS_CHECK)
 	mkdir -p $(DERIVED_DATA_PATH)
 	bash package/add_data_files
+	bash package/copy_daohui_data --override-plum data/plum
 	xcodebuild -project Squirrel.xcodeproj -configuration Debug -scheme Squirrel -derivedDataPath $(DERIVED_DATA_PATH)  $(BUILD_SETTINGS) build
 
 .PHONY: sparkle copy-sparkle-framework

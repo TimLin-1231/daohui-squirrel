@@ -1,0 +1,81 @@
+#!/bin/bash
+# DaoHui: install the DaoHui Rime data (daohui-data/) into the app.
+#
+#   copy_daohui_data <SharedSupport dir>
+#       Copy every file listed in daohui-data/FILES.txt (keeping lua/ and
+#       opencc/) into the app bundle's SharedSupport. Run by the
+#       "Copy DaoHui data" build phase of Squirrel.xcodeproj (the last phase,
+#       after the stock data and before code signing).
+#
+#   copy_daohui_data --override-plum <data/plum dir>
+#       Before xcodebuild (Makefile): put DaoHui's copy of every file that the
+#       stock plum data also has (default.yaml) into data/plum, so the stock
+#       "Copy Shared Support Files" phase already copies DaoHui's version and
+#       the order of the two copies does not matter.
+#
+# Not installed: weasel.yaml (the Windows frontend's settings; the macOS look
+# is data/squirrel.yaml), FILES.txt and README.md (they describe the folder).
+
+set -euo pipefail
+
+src="$(cd "$(dirname "$0")/../daohui-data" && pwd)"
+manifest="${src}/FILES.txt"
+
+die() { echo "error: $*" >&2; exit 1; }
+
+[ -f "${manifest}" ] || die "${manifest} not found"
+
+# Relative paths from FILES.txt (written on Windows: backslashes, maybe CRLF).
+listed=()
+while IFS= read -r line || [ -n "${line}" ]; do
+    rel="${line%$'\r'}"
+    rel="${rel//\\//}"
+    [ -n "${rel}" ] || continue
+    [ -f "${src}/${rel}" ] || die "${rel} is listed in FILES.txt but missing in daohui-data/"
+    listed+=("${rel}")
+done < "${manifest}"
+[ "${#listed[@]}" -gt 0 ] || die "FILES.txt lists no files"
+
+# Every file of the folder must be in the manifest (catches a file added
+# without regenerating FILES.txt).
+while IFS= read -r path; do
+    rel="${path#${src}/}"
+    case "${rel}" in FILES.txt|README.md) continue ;; esac
+    found=no
+    for x in "${listed[@]}"; do
+        if [ "${x}" = "${rel}" ]; then found=yes; break; fi
+    done
+    [ "${found}" = yes ] || die "daohui-data/${rel} is not listed in FILES.txt"
+done < <(find "${src}" -type f | sort)
+
+installed() {
+    case "$1" in weasel.yaml|FILES.txt|README.md) return 1 ;; esac
+    return 0
+}
+
+if [ "${1:-}" = "--override-plum" ]; then
+    plum="${2:?usage: copy_daohui_data --override-plum <data/plum dir>}"
+    for rel in "${listed[@]}"; do
+        installed "${rel}" || continue
+        case "${rel}" in */*) continue ;; esac
+        if [ -e "${plum}/${rel}" ]; then
+            cp -p "${src}/${rel}" "${plum}/${rel}"
+            echo "DaoHui ${rel} replaces the stock one in ${plum}"
+        fi
+    done
+    exit 0
+fi
+
+dst="${1:?usage: copy_daohui_data <SharedSupport dir>}"
+mkdir -p "${dst}/lua" "${dst}/opencc"
+# lua/ is DaoHui's alone; opencc/ also holds the stock OpenCC data.
+rm -f "${dst}"/lua/*.lua "${dst}"/opencc/asus_*
+
+count=0
+for rel in "${listed[@]}"; do
+    installed "${rel}" || continue
+    mkdir -p "$(dirname "${dst}/${rel}")"
+    cp -p "${src}/${rel}" "${dst}/${rel}"
+    count=$((count + 1))
+done
+echo "Copied ${count} DaoHui data files into ${dst}"

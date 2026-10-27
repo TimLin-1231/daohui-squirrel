@@ -1,0 +1,88 @@
+島輝 DaoHui - data files: sources and licences
+==============================================
+
+The schema, Lua scripts and configuration files (asus_zhuyin.schema.yaml,
+lua/*.lua, grammar.yaml, terra_pinyin.asus.dict.yaml, the DaoHui part of
+default.yaml / weasel.yaml) are part of the DaoHui input-method project
+(https://github.com/TimLin-1231/rime-asus-zhuyin), GPL-3.0.
+
+Generated data and where it comes from:
+
+* terra_pinyin.mcb.dict.yaml, opencc/asus_next.*, opencc/asus_seg.*,
+  opencc/asus_tw.* (partly)
+  Taiwan phrase readings and frequencies from McBopomofo 小麥注音
+  (https://github.com/openvanilla/McBopomofo, Source/Data, commit e663357dfdfa),
+  MIT licence (text below). BPMFMappings.txt was originally derived from
+  libtabe's tsi.src (BSD licence). Frequencies are rescaled with, and
+  asus_tw.* also uses, essay.txt and terra_pinyin.dict.yaml of the Rime
+  project (rime-essay, rime-terra-pinyin; LGPL-3.0), shipped with Weasel.
+
+* opencc/asus_en.*, opencc/asus_en_prefix.*, opencc/asus_en_fix.*,
+  opencc/asus_en_follow.*
+  English words and ranks from easy_en (rime-easy-en by BlindingDark,
+  https://github.com/BlindingDark/rime-easy-en, LGPL-3.0; its word list credits
+  ECDICT), combined with SymSpell's English word and word-pair frequencies
+  (https://github.com/wolfgarbe/SymSpell, MIT licence, text below; the word
+  frequencies were made from Google Books Ngram data, CC BY 3.0, and SCOWL).
+
+* lua/asus_zhuyin_data.lua
+  Zhuyin syllables of terra_pinyin.dict.yaml (Rime, LGPL-3.0).
+
+* terra_pinyin.tw.dict.yaml, terra_pinyin.personal.dict.yaml
+  Empty on purpose. A file of the same name in the user folder replaces them.
+
+* Language model (not included; downloaded by the settings app):
+  wanxiang-lts-zh-hant.gram from RIME-LMDG by amzxyz
+  (https://github.com/amzxyz/RIME-LMDG), CC-BY-4.0.
+
+The ocd2 files are in OpenCC's binary dictionary format (OpenCC, Apache-2.0).
+
+----------------------------------------------------------------------------
+McBopomofo data
+----------------------------------------------------------------------------
+MIT License
+
+Copyright (c) 2011-2026 Mengjuei Hsieh et al.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+----------------------------------------------------------------------------
+SymSpell
+----------------------------------------------------------------------------
+MIT License
+
+Copyright (c) 2018 Wolf Garbe
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
