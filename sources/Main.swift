@@ -35,7 +35,9 @@ struct SquirrelApp {
           runningSquirrels.forEach { $0.terminate() }
           return true
         case "--reload":
-          DistributedNotificationCenter.default().postNotificationName(.init(DaoHuiBrand.reloadNotification), object: nil)
+          // DaoHui is a background app, and AppKit suspends distributed-notification delivery to inactive apps;
+          // deliverImmediately is required for these notifications to reach it (upstream Squirrel 7b4a314)
+          DistributedNotificationCenter.default().postNotificationName(.init(DaoHuiBrand.reloadNotification), object: nil, userInfo: nil, deliverImmediately: true)
           return true
         case "--register-input-source", "--install":
           installer.register()
@@ -78,7 +80,7 @@ struct SquirrelApp {
           _ = rimeAPI.deploy()
           return true
         case "--sync":
-          DistributedNotificationCenter.default().postNotificationName(.init(DaoHuiBrand.syncNotification), object: nil)
+          DistributedNotificationCenter.default().postNotificationName(.init(DaoHuiBrand.syncNotification), object: nil, userInfo: nil, deliverImmediately: true)
           return true
         case "--help":
           print(helpDoc)
