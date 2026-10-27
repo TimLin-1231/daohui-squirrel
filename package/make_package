@@ -3,30 +3,45 @@
 set -e
 
 DERIVED_DATA_PATH=$1
-BUNDLE_IDENTIFIER='im.rime.inputmethod.Squirrel'
+# DaoHui: package id = bundle id (stock: im.rime.inputmethod.Squirrel), so the
+# receipt never replaces or removes a stock Squirrel installation.
+BUNDLE_IDENTIFIER='io.github.timlin-1231.inputmethod.DaoHui'
 INSTALL_LOCATION='/Library/Input Methods'
 
 cd "$(dirname $0)"
 source common.sh
 
+# CI passes DAOHUI_VERSION (1.1.2.<commits since 1.1.2>); otherwise use the
+# project version, as stock Squirrel does.
+version="${DAOHUI_VERSION:-$(get_app_version)}"
+echo "package version: ${version}"
+
 pkgbuild \
     --root "${PROJECT_ROOT}/${DERIVED_DATA_PATH}/Build/Products/Release" \
     --filter '.*\.swiftmodule$' \
+    --filter '.*\.dSYM$' \
     --component-plist Squirrel-component.plist \
     --identifier "${BUNDLE_IDENTIFIER}" \
-    --version "$(get_app_version)" \
+    --version "${version}" \
     --install-location "${INSTALL_LOCATION}" \
     --scripts "${PROJECT_ROOT}/scripts" \
-    Squirrel-component.pkg
+    DaoHui-component.pkg
 
-sed "s/@VERSION@/$(get_app_version)/" Distribution > Distribution-versioned.xml
+sed "s/@VERSION@/${version}/" Distribution > Distribution-versioned.xml
+
+# Only the installer pages go into the product archive's Resources
+# (stock Squirrel passes the whole package/ folder).
+resources_dir="$(mktemp -d)"
+cp conclusion.html "${resources_dir}/"
+cp -R en.lproj zh_CN.lproj zh_TW.lproj "${resources_dir}/"
 
 productbuild \
     --distribution Distribution-versioned.xml \
     --package-path . \
-    --resources . \
-    Squirrel.pkg
+    --resources "${resources_dir}" \
+    DaoHui.pkg
 
+rm -rf "${resources_dir}"
 rm Distribution-versioned.xml
 
-rm Squirrel-component.pkg
+rm DaoHui-component.pkg

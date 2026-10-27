@@ -11,14 +11,17 @@ import AppKit
 
 final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegate, UNUserNotificationCenterDelegate {
   static let rimeWikiURL = URL(string: "https://github.com/rime/home/wiki")!
-  static let updateNotificationIdentifier = "SquirrelUpdateNotification"
-  static let notificationIdentifier = "SquirrelNotification"
+  static let updateNotificationIdentifier = DaoHuiBrand.updateNotificationIdentifier
+  static let notificationIdentifier = DaoHuiBrand.notificationIdentifier
 
   let rimeAPI: RimeApi_stdbool = rime_get_api_stdbool().pointee
   var config: SquirrelConfig?
   var panel: SquirrelPanel?
   var enableNotifications = false
-  let updateController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+  // Sparkle is started only when Info.plist has a real EdDSA public key: with the
+  // DAOHUI_SPARKLE_PUBLIC_KEY placeholder (local and unsigned CI builds) the
+  // updater would refuse to start and show an error at every launch.
+  let updateController = SPUStandardUpdaterController(startingUpdater: DaoHuiBrand.sparkleConfigured, updaterDelegate: nil, userDriverDelegate: nil)
   var supportsGentleScheduledUpdateReminders: Bool {
     true
   }
@@ -107,7 +110,7 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
     center.getNotificationSettings { settings in
       if (settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional) && settings.alertSetting == .enabled {
         let content = UNMutableNotificationContent()
-        content.title = NSLocalizedString("Squirrel", comment: "")
+        content.title = NSLocalizedString("DaoHui", comment: "")
         if let msgText = msgText {
           content.subtitle = msgText
         }
@@ -135,10 +138,10 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
     squirrelTraits.setCString(Bundle.main.sharedSupportPath!, to: \.shared_data_dir)
     squirrelTraits.setCString(SquirrelApp.userDir.path(), to: \.user_data_dir)
     squirrelTraits.setCString(SquirrelApp.logDir.path(), to: \.log_dir)
-    squirrelTraits.setCString("Squirrel", to: \.distribution_code_name)
-    squirrelTraits.setCString("鼠鬚管", to: \.distribution_name)
+    squirrelTraits.setCString(DaoHuiBrand.codeName, to: \.distribution_code_name)
+    squirrelTraits.setCString(DaoHuiBrand.distributionName, to: \.distribution_name)
     squirrelTraits.setCString(Bundle.main.object(forInfoDictionaryKey: kCFBundleVersionKey as String) as! String, to: \.distribution_version)
-    squirrelTraits.setCString("rime.squirrel", to: \.app_name)
+    squirrelTraits.setCString(DaoHuiBrand.logAppName, to: \.app_name)
     rimeAPI.setup(&squirrelTraits)
   }
 
@@ -188,7 +191,7 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
   // prevent freezing the system
   func problematicLaunchDetected() -> Bool {
     var detected = false
-    let logFile = FileManager.default.temporaryDirectory.appendingPathComponent("squirrel_launch.json", conformingTo: .json)
+    let logFile = FileManager.default.temporaryDirectory.appendingPathComponent(DaoHuiBrand.launchRecordFile, conformingTo: .json)
     // print("[DEBUG] archive: \(logFile)")
     do {
       let archive = try Data(contentsOf: logFile, options: [.uncached])
@@ -223,12 +226,12 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
     center.addObserver(forName: NSWorkspace.willPowerOffNotification, object: nil, queue: nil, using: workspaceWillPowerOff)
 
     let notifCenter = DistributedNotificationCenter.default()
-    notifCenter.addObserver(forName: .init("SquirrelReloadNotification"), object: nil, queue: nil, using: rimeNeedsReload)
-    notifCenter.addObserver(forName: .init("SquirrelSyncNotification"), object: nil, queue: nil, using: rimeNeedsSync)
+    notifCenter.addObserver(forName: .init(DaoHuiBrand.reloadNotification), object: nil, queue: nil, using: rimeNeedsReload)
+    notifCenter.addObserver(forName: .init(DaoHuiBrand.syncNotification), object: nil, queue: nil, using: rimeNeedsSync)
   }
 
   func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-    print("Squirrel is quitting.")
+    print("DaoHui is quitting.")
     rimeAPI.cleanup_all_sessions()
     return .terminateNow
   }

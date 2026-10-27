@@ -1,60 +1,63 @@
-    鼠鬚管
-    爲物雖微情不淺
-    新詩醉墨時一揮
-    別後寄我無辭遠
+【島輝】輸入法 DaoHui for macOS
+===============================
 
-    　　　——歐陽修
+島輝是 [【鼠鬚管】Squirrel](https://github.com/rime/squirrel) 的改名獨立分支，
+由 RIME 團隊的鼠鬚管 1.1.2 修改而來，基於 中州韻輸入法引擎／Rime Input Method Engine 等開源技術。
 
-今由　[中州韻輸入法引擎／Rime Input Method Engine](https://rime.im)
-及其他開源技術強力驅動
+DaoHui is a renamed, independent fork of Squirrel (鼠鬚管), the macOS frontend of
+the Rime Input Method Engine, by the RIME team. It installs side by side with a stock
+Squirrel: it has its own bundle identifier, input source id, app name, package id,
+notification names, log folder and user folder (see [DAOHUI.md](DAOHUI.md)).
 
-【鼠鬚管】輸入法
-===
-[![Download](https://img.shields.io/github/v/release/rime/squirrel)](https://github.com/rime/squirrel/releases/latest)
-[![Build Status](https://github.com/rime/squirrel/actions/workflows/commit-ci.yml/badge.svg)](https://github.com/rime/squirrel/actions/workflows)
-[![GitHub Tag](https://img.shields.io/github/tag/rime/squirrel.svg)](https://github.com/rime/squirrel)
+原作：式恕堂／RIME Developers（鼠鬚管）　分支：島輝貢獻者
 
-式恕堂 版權所無
+授權條款：GPLv3（見 LICENSE.txt）
 
-授權條款：[GPL v3](https://www.gnu.org/licenses/gpl-3.0.en.html)
+項目主頁：https://github.com/TimLin-1231/rime-asus-zhuyin
 
-項目主頁：[rime.im](https://rime.im)
+上游項目：https://github.com/rime/squirrel ／ https://rime.im
 
-您可能還需要 Rime 用於其他操作系統的發行版：
+與鼠鬚管的差異
+--------------
 
-  * 【中州韻】（ibus-rime、fcitx-rime）用於 Linux
-  * 【小狼毫】用於 Windows
+  * 改名為島輝，可與鼠鬚管同時安裝：不同的 bundle id
+    （`io.github.timlin-1231.inputmethod.DaoHui`）、輸入法 id、程式名稱
+    `/Library/Input Methods/DaoHui.app`、安裝檔 id、通知名稱、
+    log 資料夾 `$TMPDIR/rime.daohui`，使用者資料夾為 `~/Library/DaoHui`。
+  * 內建島輝的注音方案（`asus_zhuyin`，為預設方案）、Lua 模組與詞庫，
+    以及仿華碩智慧輸入法的外觀（直式候選清單、行內預覽）。
+  * 更新頻道指向島輝自己的 appcast。
 
 安裝輸入法
----
+----------
 
 本品適用於 macOS 13.0+
 
-初次安裝，如果在部份應用程序中打不出字，請註銷並重新登錄。
+安裝後請登出再登入，然後到「系統設定 › 鍵盤 › 輸入方式 › 編輯 › ＋ › 繁體中文」加入【島輝】。
 
 使用輸入法
----
+----------
 
-選取輸入法指示器菜單裏的【ㄓ】字樣圖標，開始用鼠鬚管寫字。
-通過快捷鍵 `` Ctrl+` `` 或 `F4` 呼出方案選單、切換輸入方式。
+選取輸入法指示器菜單裏的【島】字樣圖標，開始用島輝寫字。
+連按兩下 Shift 切換中英文。macOS 預設把 Ctrl+Space 給「選取上一個輸入方式」，
+要用 Ctrl+Space 切中英，請先在「系統設定 › 鍵盤 › 鍵盤快速鍵 › 輸入方式」關掉它。
 
 定製輸入法
----
+----------
 
-定製方法，請參考線上 [幫助文檔](https://rime.im/docs/)。
+用戶詞庫、配置文件位於 `~/Library/DaoHui`，可通過輸入法菜單中的「用戶設定」打開。
+島輝沿用鼠鬚管的前端設定檔名稱 `squirrel.yaml`／`squirrel.custom.yaml`。
 
-使用系統輸入法菜單：
+修改詞庫、配置文件後，須「重新部署」方可生效。
 
-  * 選中「在線文檔」可打開以上網址
-  * 編輯用戶設定後，選擇「重新部署」以令修改生效
+定製 Rime 的方法，請參考線上 [幫助文檔](https://rime.im/docs/)。前端樣式和行為與鼠鬚管相同。
 
-安裝輸入方案
----
-
-使用 [/plum/](https://github.com/rime/plum) 配置管理器獲取更多輸入方案。
+從原始碼編譯：見 [DAOHUI.md](DAOHUI.md)。
 
 致謝
----
+----
+
+島輝的程式幾乎全部來自鼠鬚管。以下為鼠鬚管原有的致謝。
 
 輸入方案設計：
 
@@ -62,7 +65,7 @@
 
     感謝 CC-CEDICT、Android 拼音、新酷音、opencc 等開源項目
 
-程序設計：
+程序設計（鼠鬚管）：
 
   * 佛振
   * Linghua Zhang
@@ -74,13 +77,18 @@
   * Jak Wings
   * xiehuc
 
+  查看更多 [代碼貢獻者](https://github.com/rime/squirrel/graphs/contributors)
+
 美術：
 
-  * 圖標設計 佛振、梁海、雨過之後
+  * 圖標設計 佛振、梁海、雨過之後（鼠鬚管）
   * 配色方案 Aben、Chongyu Zhu、skoj、Superoutman、佛振、梁海
+  * 島輝圖標的「島」字以 Yuji Syuku 字型繪製 © 2021 The Yuji Project Authors，
+    SIL Open Font License 1.1
 
 本品引用了以下開源軟件：
 
+  * Squirrel／鼠鬚管 (GNU General Public License v3.0)
   * Boost C++ Libraries  (Boost Software License)
   * capnproto (MIT License)
   * darts-clone  (New BSD License)
@@ -88,23 +96,22 @@
   * Google Test  (New BSD License)
   * LevelDB  (New BSD License)
   * librime  (New BSD License)
+  * librime 外掛 librime-lua、librime-octagram、librime-predict（授權見各項目）
   * OpenCC / 開放中文轉換  (Apache License 2.0)
   * plum / 東風破 (GNU Lesser General Public License 3.0)
   * Sparkle  (MIT License)
   * UTF8-CPP  (Boost Software License)
   * yaml-cpp  (MIT License)
 
-感謝王公子捐贈開發用機。
+島輝內建資料的來源與授權見 `DAOHUI_DATA_LICENSES.txt`（安裝後位於
+`DaoHui.app/Contents/SharedSupport/`）。
 
 問題與反饋
----
+----------
 
-發現程序有 BUG，或建議，或感想，請反饋到 [Rime 代碼之家討論區](https://github.com/rime/home/discussions)
+島輝的問題請到 <https://github.com/TimLin-1231/rime-asus-zhuyin/issues> 反饋，
+請不要把島輝特有的問題回報到鼠鬚管。
 
-聯繫方式
----
+Rime 輸入法功能、使用方法與配置相關的問題，請參考 <https://github.com/rime/home>
 
-技術交流，歡迎光臨 [Rime 代碼之家](https://github.com/rime/home)，
-或致信 Rime 開發者 <rimeime@gmail.com>。
-
-謝謝
+謝謝 RIME 團隊與鼠鬚管的所有貢獻者！

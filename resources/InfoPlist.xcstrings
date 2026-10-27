@@ -7,19 +7,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Squirrel"
+            "value" : "DaoHui"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠须管"
+            "value" : "島輝"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠鬚管"
+            "value" : "島輝"
           }
         }
       }
@@ -31,88 +31,65 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Squirrel"
+            "value" : "DaoHui"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠须管"
+            "value" : "島輝"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠鬚管"
+            "value" : "島輝"
           }
         }
       }
     },
-    "im.rime.inputmethod.Squirrel" : {
+    "io.github.timlin-1231.inputmethod.DaoHui" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Squirrel"
+            "value" : "DaoHui"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠须管"
+            "value" : "島輝"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠鬚管"
+            "value" : "島輝"
           }
         }
       }
     },
-    "im.rime.inputmethod.Squirrel.Hans" : {
+    "io.github.timlin-1231.inputmethod.DaoHui.Hant" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Squirrel - Simplified"
+            "value" : "DaoHui"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠须管"
+            "value" : "島輝"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠须管"
-          }
-        }
-      }
-    },
-    "im.rime.inputmethod.Squirrel.Hant" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Squirrel - Traditional"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "鼠鬚管"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "鼠鬚管"
+            "value" : "島輝"
           }
         }
       }
@@ -124,19 +101,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Copyleft, RIME Developers"
+            "value" : "Based on Squirrel (鼠鬚管) by the RIME team. GPLv3 | Copyleft RIME Developers and DaoHui contributors"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "式恕堂 版权所无"
+            "value" : "基于 RIME 团队的鼠须管 (Squirrel)。GPLv3 | Copyleft RIME Developers 与島輝贡献者"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "式恕堂 版權所無"
+            "value" : "基於 RIME 團隊的鼠鬚管 (Squirrel)。GPLv3 | Copyleft RIME Developers 與島輝貢獻者"
           }
         }
       }

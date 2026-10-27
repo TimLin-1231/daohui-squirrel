@@ -9,10 +9,11 @@ import Foundation
 import InputMethodKit
 
 final class SquirrelInstaller {
+  // DaoHui registers one Traditional Chinese mode (stock Squirrel: .Hans and
+  // .Hant). Keep the id in step with resources/Info.plist and InfoPlist.xcstrings.
   enum InputMode: String, CaseIterable {
-    static let primary = Self.hans
-    case hans = "im.rime.inputmethod.Squirrel.Hans"
-    case hant = "im.rime.inputmethod.Squirrel.Hant"
+    static let primary = Self.hant
+    case hant = "io.github.timlin-1231.inputmethod.DaoHui.Hant"
   }
   private lazy var inputSources: [String: TISInputSource] = {
     var inputSources = [String: TISInputSource]()
@@ -43,7 +44,7 @@ final class SquirrelInstaller {
   func register() {
     let enabledInputModes = enabledModes()
     if !enabledInputModes.isEmpty {
-      print("User already registered Squirrel method(s): \(enabledInputModes.map { $0.rawValue })")
+      print("User already registered DaoHui method(s): \(enabledInputModes.map { $0.rawValue })")
       // Already registered.
       return
     }
@@ -54,7 +55,7 @@ final class SquirrelInstaller {
   func enable(modes: [InputMode] = []) {
     let enabledInputModes = enabledModes()
     if !enabledInputModes.isEmpty && modes.isEmpty {
-      print("User already enabled Squirrel method(s): \(enabledInputModes.map { $0.rawValue })")
+      print("User already enabled DaoHui method(s): \(enabledInputModes.map { $0.rawValue })")
       // keep user's manually enabled input modes.
       return
     }

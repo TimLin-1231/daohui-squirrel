@@ -101,7 +101,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Squirrel is ready."
+            "value" : "DaoHui is ready."
           }
         },
         "zh-Hans" : {
@@ -191,19 +191,19 @@
         }
       }
     },
-    "Squirrel" : {
+    "DaoHui" : {
       "comment" : "Menu title",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠须管"
+            "value" : "島輝"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鼠鬚管"
+            "value" : "島輝"
           }
         }
       }

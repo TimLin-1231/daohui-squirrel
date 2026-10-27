@@ -1,13 +1,15 @@
 #!/bin/bash
 set -e
 
+# DaoHui: same steps as stock Squirrel, on DaoHui.app only (a stock
+# Squirrel.app next to it is not touched).
 login_user=`/usr/bin/stat -f%Su /dev/console`
-squirrel_app_root="${DSTROOT}/Squirrel.app"
-squirrel_executable="${squirrel_app_root}/Contents/MacOS/Squirrel"
+squirrel_app_root="${DSTROOT}/DaoHui.app"
+squirrel_executable="${squirrel_app_root}/Contents/MacOS/DaoHui"
 rime_package_installer="${squirrel_app_root}/Contents/MacOS/rime-install"
 rime_shared_data_path="${squirrel_app_root}/Contents/SharedSupport"
 
-/usr/bin/sudo -u "${login_user}" /usr/bin/killall Squirrel > /dev/null || true
+/usr/bin/sudo -u "${login_user}" /usr/bin/killall DaoHui > /dev/null || true
 
 "${squirrel_executable}" --register-input-source
 

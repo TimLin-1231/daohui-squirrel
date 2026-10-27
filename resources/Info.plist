@@ -3,80 +3,58 @@
 <plist version="1.0">
 <dict>
 	<key>TISInputSourceID</key>
-	<string>im.rime.inputmethod.Squirrel</string>
+	<string>io.github.timlin-1231.inputmethod.DaoHui</string>
+	<key>TISIconIsTemplate</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>Squirrel</string>
+	<string>DaoHui</string>
 	<key>CFBundleIconFile</key>
-	<string>RimeIcon.icns</string>
+	<string>DaoHui</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Squirrel</string>
+	<string>DaoHui</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ComponentInputModeDict</key>
 	<dict>
 		<key>tsInputModeListKey</key>
 		<dict>
-			<key>im.rime.inputmethod.Squirrel.Hans</key>
+			<key>io.github.timlin-1231.inputmethod.DaoHui.Hant</key>
 			<dict>
 				<key>TISInputSourceID</key>
-				<string>im.rime.inputmethod.Squirrel.Hans</string>
-				<key>TISIntendedLanguage</key>
-				<string>zh-Hans</string>
-				<key>tsInputModeAlternateMenuIconFileKey</key>
-				<string>rime.pdf</string>
-				<key>tsInputModeCharacterRepertoireKey</key>
-				<array>
-					<string>Hans</string>
-					<string>Hant</string>
-				</array>
-				<key>tsInputModeDefaultStateKey</key>
-				<true/>
-				<key>tsInputModeIsVisibleKey</key>
-				<true/>
-				<key>tsInputModeKeyEquivalentModifiersKey</key>
-				<integer>4608</integer>
-				<key>tsInputModeMenuIconFileKey</key>
-				<string>rime.pdf</string>
-				<key>tsInputModePaletteIconFileKey</key>
-				<string>rime.pdf</string>
-				<key>tsInputModePrimaryInScriptKey</key>
-				<true/>
-				<key>tsInputModeScriptKey</key>
-				<string>smUnicodeScript</string>
-			</dict>
-			<key>im.rime.inputmethod.Squirrel.Hant</key>
-			<dict>
-				<key>TISInputSourceID</key>
-				<string>im.rime.inputmethod.Squirrel.Hant</string>
+				<string>io.github.timlin-1231.inputmethod.DaoHui.Hant</string>
 				<key>TISIntendedLanguage</key>
 				<string>zh-Hant</string>
+				<key>TISIconIsTemplate</key>
+				<true/>
 				<key>tsInputModeAlternateMenuIconFileKey</key>
-				<string>rime.pdf</string>
+				<string>daohui.pdf</string>
 				<key>tsInputModeCharacterRepertoireKey</key>
 				<array>
 					<string>Hant</string>
 					<string>Hans</string>
 				</array>
 				<key>tsInputModeDefaultStateKey</key>
-				<false/>
+				<true/>
 				<key>tsInputModeIsVisibleKey</key>
 				<true/>
 				<key>tsInputModeKeyEquivalentModifiersKey</key>
 				<integer>4608</integer>
 				<key>tsInputModeMenuIconFileKey</key>
-				<string>rime.pdf</string>
+				<string>daohui.pdf</string>
 				<key>tsInputModePaletteIconFileKey</key>
-				<string>rime.pdf</string>
+				<string>daohui.pdf</string>
 				<key>tsInputModePrimaryInScriptKey</key>
 				<true/>
 				<key>tsInputModeScriptKey</key>
@@ -85,16 +63,15 @@
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
-			<string>im.rime.inputmethod.Squirrel.Hans</string>
-			<string>im.rime.inputmethod.Squirrel.Hant</string>
+			<string>io.github.timlin-1231.inputmethod.DaoHui.Hant</string>
 		</array>
 	</dict>
 	<key>InputMethodConnectionName</key>
-	<string>Squirrel_Connection</string>
+	<string>DaoHui_Connection</string>
 	<key>InputMethodServerControllerClass</key>
-	<string>Squirrel.SquirrelInputController</string>
+	<string>$(PRODUCT_MODULE_NAME).SquirrelInputController</string>
 	<key>InputMethodServerDelegateClass</key>
-	<string>Squirrel.SquirrelInputController</string>
+	<string>$(PRODUCT_MODULE_NAME).SquirrelInputController</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
 	<key>LSUIElement</key>
@@ -104,9 +81,9 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://rime.github.io/release/squirrel/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/update/appcast-macos.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>ukvWq2dKOWn3B9AsdsQIwOptiDdDKdUjAVNgFxSvB2o=</string>
+	<string>DAOHUI_SPARKLE_PUBLIC_KEY</string>
 	<key>TICapsLockLanguageSwitchCapable</key>
 	<true/>
 	<key>SUEnableInstallerLauncherService</key>

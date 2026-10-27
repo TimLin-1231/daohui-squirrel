@@ -1,14 +1,34 @@
 #! /bin/bash
 # enconding: utf-8
+#
+# DaoHui: copy package/DaoHui.pkg to DaoHui-<version>.pkg and, when a Sparkle
+# EdDSA private key is available, sign it and write the Sparkle appcast
+# (appcast-macos.xml, published at the SUFeedURL of resources/Info.plist).
+#
+# Environment (all optional):
+#   DAOHUI_VERSION            package version (default: project version)
+#   DAOHUI_RELEASE_TAG        GitHub release tag the .pkg is attached to
+#                             (default: v<version>)
+#   GITHUB_REPOSITORY         owner/repo of the releases (set by GitHub Actions;
+#                             default: TimLin-1231/daohui-mac)
+#   SPARKLE_ED_KEY_FILE       file with the EdDSA private key (from
+#                             Sparkle's generate_keys -x); default: the login
+#                             keychain, as stock Squirrel does
+#   checksum                  verify an existing DaoHui-<version>.pkg instead
 
 set -e
 
 cd "$(dirname $0)"
 source common.sh
 
-app_version="$(get_app_version)"
-target_pkg="Squirrel-${app_version}.pkg"
-download_url="https://github.com/rime/squirrel/releases/download/${app_version}/${target_pkg}"
+app_version="${DAOHUI_VERSION:-$(get_app_version)}"
+target_pkg="DaoHui-${app_version}.pkg"
+release_repo="${GITHUB_REPOSITORY:-TimLin-1231/daohui-mac}"
+release_tag="${DAOHUI_RELEASE_TAG:-v${app_version}}"
+download_url="https://github.com/${release_repo}/releases/download/${release_tag}/${target_pkg}"
+release_notes_url="https://github.com/${release_repo}/releases/tag/${release_tag}"
+# The feed URL is defined once, in Info.plist.
+feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' ../resources/Info.plist)"
 
 verify_archive() {
     if ! [ -f "${target_pkg}" ]; then
@@ -25,7 +45,7 @@ create_archive() {
         echo >&2 "ERROR: target archive already exists: ${target_pkg}"
         exit 1
     fi
-    cp Squirrel.pkg "${target_pkg}"
+    cp DaoHui.pkg "${target_pkg}"
     echo 'sha256 checksum:'
     shasum -a 256 "${target_pkg}"
 }
@@ -36,7 +56,12 @@ else
     create_archive
 fi
 
-if signature=$(./sign_update "${target_pkg}"); then
+if [ -n "${SPARKLE_ED_KEY_FILE}" ]; then
+    sign_args=(--ed-key-file "${SPARKLE_ED_KEY_FILE}")
+else
+    sign_args=()
+fi
+if signature=$(./sign_update "${sign_args[@]}" "${target_pkg}"); then
     echo "sign update is successful."
 else
     echo "sign_update not working, skiping signing update."
@@ -46,52 +71,25 @@ edSignature=$(echo $signature | awk -F'"' '{print $2}')
 length=$(echo $signature | awk -F'"' '{print $4}')
 pub_date=$(date -R)
 
-# for release channel
-appcast_file='appcast.xml'
+# release channel (the testing channel of DaoHui uses the same feed)
+appcast_file='appcast-macos.xml'
 
 cat > "${appcast_file}" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>【鼠鬚管】輸入法更新頻道</title>
-    <link>https://rime.github.io/release/squirrel/appcast.xml</link>
-    <description>鼠鬚管 Appcast 更新頻道</description>
+    <title>【島輝】輸入法更新頻道（macOS）</title>
+    <link>${feed_url}</link>
+    <description>島輝 DaoHui for macOS Appcast 更新頻道</description>
     <language>zh</language>
     <item>
-      <title>鼠鬚管 ${app_version}</title>
-      <sparkle:releaseNotesLink>https://rime.github.io/release/squirrel/</sparkle:releaseNotesLink>
+      <title>島輝 ${app_version}</title>
+      <sparkle:releaseNotesLink>${release_notes_url}</sparkle:releaseNotesLink>
       <sparkle:minimumSystemVersion>13.0.0</sparkle:minimumSystemVersion>
       <pubDate>${pub_date}</pubDate>
       <enclosure url="${download_url}"
                  sparkle:version="${app_version}"
-                 sparkle:edSignature="${edSignature}"
-                 length="${length}"
-                 type="application/octet-stream"/>
-    </item>
-  </channel>
-</rss>
-EOF
-
-ls -l ${appcast_file}
-
-# for testing channel
-appcast_file='testing-appcast.xml'
-
-cat > "${appcast_file}" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>【鼠鬚管】輸入法測試頻道</title>
-    <link>https://rime.github.io/testing/squirrel/appcast.xml</link>
-    <description>鼠鬚管測試版 Appcast 更新頻道</description>
-    <language>zh</language>
-    <item>
-      <title>鼠鬚管 ${app_version}</title>
-      <sparkle:releaseNotesLink>https://rime.github.io/testing/squirrel/</sparkle:releaseNotesLink>
-      <sparkle:minimumSystemVersion>13.0.0</sparkle:minimumSystemVersion>
-      <pubDate>${pub_date}</pubDate>
-      <enclosure url="${download_url}"
-                 sparkle:version="${app_version}"
+                 sparkle:shortVersionString="${app_version}"
                  sparkle:edSignature="${edSignature}"
                  length="${length}"
                  type="application/octet-stream"/>
@@ -110,17 +108,18 @@ cat > "${appcast_file}" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>【鼠鬚管】輸入法本地測試</title>
+    <title>【島輝】輸入法本機測試</title>
     <link>file://${PROJECT_ROOT}/package/${appcast_file}</link>
-    <description>鼠鬚管 Appcast 更新本地測試</description>
+    <description>島輝 Appcast 更新本機測試</description>
     <language>zh</language>
     <item>
-      <title>鼠鬚管 ${app_version}</title>
-      <sparkle:releaseNotesLink>https://rime.github.io/testing/squirrel/</sparkle:releaseNotesLink>
-      <sparkle:minimumSystemVersion>10.9.0</sparkle:minimumSystemVersion>
+      <title>島輝 ${app_version}</title>
+      <sparkle:releaseNotesLink>${release_notes_url}</sparkle:releaseNotesLink>
+      <sparkle:minimumSystemVersion>13.0.0</sparkle:minimumSystemVersion>
       <pubDate>${pub_date}</pubDate>
       <enclosure url="${download_url}"
                  sparkle:version="${app_version}"
+                 sparkle:shortVersionString="${app_version}"
                  sparkle:edSignature="${edSignature}"
                  length="${length}"
                  type="application/octet-stream"/>

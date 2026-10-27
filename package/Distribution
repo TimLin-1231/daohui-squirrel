@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-    <title>Squirrel-@VERSION@</title>
+    <title>島輝 DaoHui @VERSION@</title>
     <conclusion file="conclusion.html" mime-type="text/html"/>
-    <pkg-ref id="im.rime.inputmethod.Squirrel"/>
+    <pkg-ref id="io.github.timlin-1231.inputmethod.DaoHui"/>
     <options customize="never" hostArchitectures="arm64,x86_64" require-scripts="false" rootVolumeOnly="true"/>
     <choices-outline>
         <line choice="default">
-            <line choice="im.rime.inputmethod.Squirrel"/>
+            <line choice="io.github.timlin-1231.inputmethod.DaoHui"/>
         </line>
     </choices-outline>
     <choice id="default"/>
-    <choice id="im.rime.inputmethod.Squirrel" visible="false">
-        <pkg-ref id="im.rime.inputmethod.Squirrel"/>
+    <choice id="io.github.timlin-1231.inputmethod.DaoHui" visible="false">
+        <pkg-ref id="io.github.timlin-1231.inputmethod.DaoHui"/>
     </choice>
-    <pkg-ref id="im.rime.inputmethod.Squirrel" onConclusion="RequireLogout">Squirrel-component.pkg</pkg-ref>
+    <pkg-ref id="io.github.timlin-1231.inputmethod.DaoHui" onConclusion="RequireLogout">DaoHui-component.pkg</pkg-ref>
 </installer-gui-script>

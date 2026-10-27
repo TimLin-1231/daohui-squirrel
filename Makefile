@@ -22,7 +22,7 @@ OPENCC_DATA = data/opencc/TSCharacters.ocd2 \
 	data/opencc/TSPhrases.ocd2 \
 	data/opencc/t2s.json
 SPARKLE_FRAMEWORK = Frameworks/Sparkle.framework
-PACKAGE = package/Squirrel.pkg
+PACKAGE = package/DaoHui.pkg
 DEPS_CHECK = $(RIME_LIBRARY) $(PLUM_DATA) $(OPENCC_DATA) $(SPARKLE_FRAMEWORK)
 
 OPENCC_DATA_OUTPUT = librime/share/opencc/*.*
@@ -97,6 +97,13 @@ ifdef MACOSX_DEPLOYMENT_TARGET
 BUILD_SETTINGS += MACOSX_DEPLOYMENT_TARGET="$(MACOSX_DEPLOYMENT_TARGET)"
 endif
 
+# DaoHui: CFBundleVersion / package version, e.g. 1.1.2.<commits since 1.1.2>
+# (set by the CI workflow; default: CURRENT_PROJECT_VERSION of the project).
+ifdef DAOHUI_VERSION
+BUILD_SETTINGS += CURRENT_PROJECT_VERSION="$(DAOHUI_VERSION)"
+export DAOHUI_VERSION
+endif
+
 BUILD_SETTINGS += COMPILER_INDEX_STORE_ENABLE=YES
 
 release: $(DEPS_CHECK)
@@ -143,11 +150,11 @@ ifdef DEV_ID
 endif
 	bash package/make_package "$(DERIVED_DATA_PATH)"
 ifdef DEV_ID
-	productsign --sign "Developer ID Installer: $(DEV_ID)" package/Squirrel.pkg package/Squirrel-signed.pkg
-	rm package/Squirrel.pkg
-	mv package/Squirrel-signed.pkg package/Squirrel.pkg
-	xcrun notarytool submit package/Squirrel.pkg --keychain-profile "$(DEV_ID)" --wait
-	xcrun stapler staple package/Squirrel.pkg
+	productsign --sign "Developer ID Installer: $(DEV_ID)" package/DaoHui.pkg package/DaoHui-signed.pkg
+	rm package/DaoHui.pkg
+	mv package/DaoHui-signed.pkg package/DaoHui.pkg
+	xcrun notarytool submit package/DaoHui.pkg --keychain-profile "$(DEV_ID)" --wait
+	xcrun stapler staple package/DaoHui.pkg
 endif
 
 package: release $(PACKAGE)
@@ -156,7 +163,7 @@ archive: package package/sign_update
 	bash package/make_archive
 
 DSTROOT = /Library/Input Methods
-SQUIRREL_APP_ROOT = $(DSTROOT)/Squirrel.app
+SQUIRREL_APP_ROOT = $(DSTROOT)/DaoHui.app
 
 .PHONY: permission-check install-debug install-release
 
@@ -165,12 +172,12 @@ permission-check:
 
 install-debug: debug permission-check
 	rm -rf "$(SQUIRREL_APP_ROOT)"
-	cp -R $(DERIVED_DATA_PATH)/Build/Products/Debug/Squirrel.app "$(DSTROOT)"
+	cp -R $(DERIVED_DATA_PATH)/Build/Products/Debug/DaoHui.app "$(DSTROOT)"
 	DSTROOT="$(DSTROOT)" RIME_NO_PREBUILD=1 bash scripts/postinstall
 
 install-release: release permission-check
 	rm -rf "$(SQUIRREL_APP_ROOT)"
-	cp -R $(DERIVED_DATA_PATH)/Build/Products/Release/Squirrel.app "$(DSTROOT)"
+	cp -R $(DERIVED_DATA_PATH)/Build/Products/Release/DaoHui.app "$(DSTROOT)"
 	DSTROOT="$(DSTROOT)" bash scripts/postinstall
 
 .PHONY: clean clean-deps
