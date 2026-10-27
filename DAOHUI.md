@@ -74,7 +74,7 @@ The separate user folder means a stock Squirrel and DaoHui never share
 | `SUFeedURL` | `https://rime.github.io/release/squirrel/appcast.xml` | `https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/update/appcast-macos.xml` |
 | `SUPublicEDKey` | Squirrel's EdDSA key | placeholder `DAOHUI_SPARKLE_PUBLIC_KEY` |
 | Appcasts written by `make_archive` | `appcast.xml`, `testing-appcast.xml`, `debug-appcast.xml` | `appcast-macos.xml` (the testing channel uses the same feed, as on Windows), `debug-appcast.xml` |
-| Download URL in the appcast | `github.com/rime/squirrel/releases/download/<ver>/Squirrel-<ver>.pkg` | `github.com/<GITHUB_REPOSITORY>/releases/download/<tag>/DaoHui-<ver>.pkg` (default repo `TimLin-1231/daohui-mac`, tag `v<ver>`) |
+| Download URL in the appcast | `github.com/rime/squirrel/releases/download/<ver>/Squirrel-<ver>.pkg` | `github.com/<GITHUB_REPOSITORY>/releases/download/<tag>/DaoHui-<ver>.pkg` (default repo `TimLin-1231/daohui-squirrel`, tag `v<ver>`) |
 
 `SUFeedURL` is the single constant: `make_archive` reads it from `resources/Info.plist`
 with PlistBuddy.

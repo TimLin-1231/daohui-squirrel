@@ -10,7 +10,7 @@
 #   DAOHUI_RELEASE_TAG        GitHub release tag the .pkg is attached to
 #                             (default: v<version>)
 #   GITHUB_REPOSITORY         owner/repo of the releases (set by GitHub Actions;
-#                             default: TimLin-1231/daohui-mac)
+#                             default: TimLin-1231/daohui-squirrel)
 #   SPARKLE_ED_KEY_FILE       file with the EdDSA private key (from
 #                             Sparkle's generate_keys -x); default: the login
 #                             keychain, as stock Squirrel does
@@ -23,7 +23,7 @@ source common.sh
 
 app_version="${DAOHUI_VERSION:-$(get_app_version)}"
 target_pkg="DaoHui-${app_version}.pkg"
-release_repo="${GITHUB_REPOSITORY:-TimLin-1231/daohui-mac}"
+release_repo="${GITHUB_REPOSITORY:-TimLin-1231/daohui-squirrel}"
 release_tag="${DAOHUI_RELEASE_TAG:-v${app_version}}"
 download_url="https://github.com/${release_repo}/releases/download/${release_tag}/${target_pkg}"
 release_notes_url="https://github.com/${release_repo}/releases/tag/${release_tag}"
@@ -70,13 +70,17 @@ fi
 edSignature=$(echo $signature | awk -F'"' '{print $2}')
 length=$(echo $signature | awk -F'"' '{print $4}')
 pub_date=$(date -R)
+# for the settings app (app/daohui-settings in rime-asus-zhuyin), which
+# installs a .pkg only after checking this hash
+pkg_sha256=$(shasum -a 256 "${target_pkg}" | awk '{print $1}')
 
 # release channel (the testing channel of DaoHui uses the same feed)
 appcast_file='appcast-macos.xml'
 
 cat > "${appcast_file}" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
+     xmlns:daohui="https://github.com/TimLin-1231/rime-asus-zhuyin/ns/appcast">
   <channel>
     <title>【島輝】輸入法更新頻道（macOS）</title>
     <link>${feed_url}</link>
@@ -91,8 +95,10 @@ cat > "${appcast_file}" << EOF
                  sparkle:version="${app_version}"
                  sparkle:shortVersionString="${app_version}"
                  sparkle:edSignature="${edSignature}"
+                 sparkle:os="macos"
                  length="${length}"
-                 type="application/octet-stream"/>
+                 type="application/octet-stream"
+                 daohui:sha256="${pkg_sha256}"/>
     </item>
   </channel>
 </rss>
