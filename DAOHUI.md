@@ -107,7 +107,7 @@ registered/enabled" and "Selection succeeds" because `sudo -u` from the installe
 the installer's bootstrap and its input source calls never reach the user's text input
 server. Running `--register-input-source` and `--select-input-source` by hand in the
 user's Terminal registered and selected it, but the enabled state was saved only by
-logging out and in. Since 1.1.2.17 the postinstall runs `DaoHui --update-input-source`
+logging out and in. Since 1.1.2.18 the postinstall runs `DaoHui --update-input-source`
 through `launchctl asuser` in the login user's session: it registers unconditionally,
 turns the mode off and on (enabling is what gets saved) and selects it.
 

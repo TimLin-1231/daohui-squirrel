@@ -34,27 +34,25 @@ deploy)
     echo "rime_deployer --build took $(( $(date +%s) - start )) s"
     ls -l "${user}/build"
     status=0
-    for f in default.yaml asus_zhuyin.schema.yaml; do
-        if [ -s "${user}/build/${f}" ]; then
-            echo "ok    build/${f}"
-        else
-            echo "FAIL  build/${f} was not built"
-            status=1
+    # librime builds into the user folder only what differs from the prebuilt
+    # data in SharedSupport/build (package/prebuild_shared); with an empty user
+    # folder that is usually nothing.
+    deployed() {
+        if [ -s "${user}/build/$1" ]; then
+            echo "${user}/build/$1"
+        elif [ -s "${shared}/build/$1" ]; then
+            echo "${shared}/build/$1"
         fi
+    }
+    for f in default.yaml asus_zhuyin.schema.yaml asus_zhuyin.prism.bin terra_pinyin.asus.table.bin; do
+        found="$(deployed "${f}")"
+        case "${found}" in
+            "${user}"/*) echo "ok    build/${f}" ;;
+            "") echo "FAIL  build/${f} was not built"; status=1 ;;
+            *) echo "ok    build/${f} (prebuilt one in SharedSupport/build is up to date)" ;;
+        esac
     done
-    # Dictionaries: librime uses the prebuilt ones in SharedSupport/build
-    # (package/prebuild_shared) when they are up to date.
-    for f in asus_zhuyin.prism.bin terra_pinyin.asus.table.bin; do
-        if [ -s "${user}/build/${f}" ]; then
-            echo "ok    build/${f}"
-        elif [ -s "${shared}/build/${f}" ]; then
-            echo "ok    build/${f} (prebuilt one in SharedSupport/build is up to date)"
-        else
-            echo "FAIL  build/${f} was not built"
-            status=1
-        fi
-    done
-    if grep -q 'schema: asus_zhuyin' "${user}/build/default.yaml" 2>/dev/null; then
+    if grep -q 'schema: asus_zhuyin' "$(deployed default.yaml)" 2>/dev/null; then
         echo "ok    schema_list of the deployed default.yaml has asus_zhuyin"
     else
         echo "FAIL  asus_zhuyin is not in the deployed schema_list"
