@@ -15,9 +15,12 @@ final class SquirrelInstaller {
     static let primary = Self.hant
     case hant = "io.github.timlin-1231.inputmethod.DaoHui.Hant"
   }
-  private lazy var inputSources: [String: TISInputSource] = {
+  private lazy var inputSources: [String: TISInputSource] = Self.listInputSources()
+
+  // DaoHui: a function (stock: the lazy initializer) so refresh() can read the
+  // list again after registering.
+  private static func listInputSources() -> [String: TISInputSource] {
     var inputSources = [String: TISInputSource]()
-    var matchingSources = [InputMode: TISInputSource]()
     let sourceList = TISCreateInputSourceList(nil, true).takeRetainedValue() as! [TISInputSource]
     for inputSource in sourceList {
       let sourceIDRef = TISGetInputSourceProperty(inputSource, kTISPropertyInputSourceID)
@@ -26,7 +29,7 @@ final class SquirrelInstaller {
       inputSources[sourceID] = inputSource
     }
     return inputSources
-  }()
+  }
 
   func enabledModes() -> [InputMode] {
     var enabledModes = Set<InputMode>()
@@ -90,6 +93,38 @@ final class SquirrelInstaller {
         print("Failed to select \(mode.rawValue)")
       }
     }
+  }
+
+  // DaoHui: scripts/postinstall runs this in the login user's session after
+  // every install or update. Replacing the bundle leaves a stale entry in the
+  // user's input sources: greyed out in the menu, possibly still reported as
+  // enabled but missing from AppleEnabledInputSources, so register() and
+  // enable() return early and the input method stays unusable until the next
+  // login. Register unconditionally, read the list again, turn the primary
+  // mode off and on (enabling is what the text input server saves) and select it.
+  func refresh() {
+    TISRegisterInputSource(SquirrelApp.appDir as CFURL)
+    print("Registered input source from \(SquirrelApp.appDir)")
+    let mode = InputMode.primary
+    var found: TISInputSource?
+    for attempt in 1...10 {
+      inputSources = Self.listInputSources()
+      found = inputSources[mode.rawValue]
+      if found != nil || attempt == 10 { break }
+      Thread.sleep(forTimeInterval: 0.2)
+    }
+    guard let inputSource = found else {
+      print("Input source not found after registering: \(mode.rawValue)")
+      return
+    }
+    if getBool(for: inputSource, key: kTISPropertyInputSourceIsEnabled) == true {
+      let error = TISDisableInputSource(inputSource)
+      print("Disable \(error == noErr ? "succeeds" : "fails") for input source: \(mode.rawValue)")
+    }
+    var error = TISEnableInputSource(inputSource)
+    print("Enable \(error == noErr ? "succeeds" : "fails") for input source: \(mode.rawValue)")
+    error = TISSelectInputSource(inputSource)
+    print("Selection \(error == noErr ? "succeeds" : "fails") for input source: \(mode.rawValue)")
   }
 
   func disable(modes: [InputMode] = []) {

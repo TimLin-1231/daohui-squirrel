@@ -111,6 +111,7 @@ release: $(DEPS_CHECK)
 	bash package/add_data_files
 	bash package/copy_daohui_data --override-plum data/plum
 	xcodebuild -project Squirrel.xcodeproj -configuration Release -scheme Squirrel -derivedDataPath $(DERIVED_DATA_PATH) $(BUILD_SETTINGS) build
+	bash package/prebuild_shared $(DERIVED_DATA_PATH)/Build/Products/Release/DaoHui.app
 
 debug: $(DEPS_CHECK)
 	mkdir -p $(DERIVED_DATA_PATH)
@@ -178,7 +179,7 @@ permission-check:
 install-debug: debug permission-check
 	rm -rf "$(SQUIRREL_APP_ROOT)"
 	cp -R $(DERIVED_DATA_PATH)/Build/Products/Debug/DaoHui.app "$(DSTROOT)"
-	DSTROOT="$(DSTROOT)" RIME_NO_PREBUILD=1 bash scripts/postinstall
+	DSTROOT="$(DSTROOT)" bash scripts/postinstall
 
 install-release: release permission-check
 	rm -rf "$(SQUIRREL_APP_ROOT)"

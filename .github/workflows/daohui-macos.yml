@@ -178,7 +178,7 @@ jobs:
 
           - Universal (Apple silicon and Intel), macOS 13 or later; installs /Library/Input Methods/DaoHui.app next to any stock Squirrel.
           - ${signing}
-          - After installing, log out and in, then add 島輝 in System Settings > Keyboard > Input Sources.
+          - Installing adds and selects 島輝 for the logged-in user. If it stays greyed out or missing, log out and in, then add 島輝 in System Settings > Keyboard > Input Sources.
           - Built from ${GITHUB_SHA} by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
           EOF
           if gh release view "${tag}" > /dev/null 2>&1; then

@@ -87,7 +87,9 @@ for f in \
     Contents/SharedSupport/terra_pinyin.dict.yaml \
     Contents/SharedSupport/stroke.dict.yaml \
     Contents/SharedSupport/opencc/t2s.json \
-    Contents/SharedSupport/opencc/t2tw.json
+    Contents/SharedSupport/opencc/t2tw.json \
+    Contents/SharedSupport/build/asus_zhuyin.prism.bin \
+    Contents/SharedSupport/build/terra_pinyin.asus.table.bin
 do
     if [ -e "${app}/${f}" ]; then ok "${f}"; else bad "missing ${f}"; fi
 done
@@ -119,10 +121,11 @@ for f in weasel.yaml FILES.txt; do
     if [ -e "${app}/Contents/SharedSupport/${f}" ]; then bad "${f} should not be installed"; fi
 done
 
+# The prebuilt SharedSupport/build is sealed in (package/prebuild_shared).
 if codesign --verify --deep --strict "${app}" 2>/dev/null; then
     ok "codesign --verify --deep --strict"
 else
-    warn "codesign --verify failed: $(codesign --verify --deep --strict "${app}" 2>&1 | tail -1)"
+    bad "codesign --verify failed: $(codesign --verify --deep --strict "${app}" 2>&1 | tail -1)"
 fi
 codesign -dv "${app}" 2>&1 | grep -E '^(Identifier|Signature|Authority|TeamIdentifier)' | sed 's/^/info  /'
 
@@ -135,7 +138,12 @@ if [ -n "${pkg}" ]; then
         else
             bad "pkg: unexpected PackageInfo: $(head -c 400 "${info}")"
         fi
-        if [ -f "${tmp}/x/DaoHui-component.pkg/Scripts/postinstall" ]; then ok "pkg: postinstall"; else bad "pkg: no postinstall"; fi
+        script="${tmp}/x/DaoHui-component.pkg/Scripts/postinstall"
+        if grep -q -- '--update-input-source' "${script}" 2>/dev/null; then
+            ok "pkg: postinstall (--update-input-source)"
+        else
+            bad "pkg: no postinstall, or one without --update-input-source"
+        fi
         if grep -q 'hostArchitectures="arm64,x86_64"' "${tmp}/x/Distribution"; then ok "pkg: hostArchitectures"; else bad "pkg: Distribution lacks hostArchitectures"; fi
         payload="${tmp}/x/DaoHui-component.pkg/Payload"
         if [ -x "${payload}/DaoHui.app/Contents/MacOS/DaoHui" ]; then
@@ -147,6 +155,11 @@ if [ -n "${pkg}" ]; then
             ok "pkg: payload has the DaoHui schema"
         else
             bad "pkg: payload lacks SharedSupport/asus_zhuyin.schema.yaml"
+        fi
+        if [ -s "${payload}/DaoHui.app/Contents/SharedSupport/build/asus_zhuyin.prism.bin" ]; then
+            ok "pkg: payload has the prebuilt data"
+        else
+            bad "pkg: payload lacks SharedSupport/build/asus_zhuyin.prism.bin"
         fi
     else
         warn "pkgutil --expand-full failed; package contents not checked"

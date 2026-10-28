@@ -34,9 +34,21 @@ deploy)
     echo "rime_deployer --build took $(( $(date +%s) - start )) s"
     ls -l "${user}/build"
     status=0
-    for f in default.yaml asus_zhuyin.schema.yaml asus_zhuyin.prism.bin terra_pinyin.asus.table.bin; do
+    for f in default.yaml asus_zhuyin.schema.yaml; do
         if [ -s "${user}/build/${f}" ]; then
             echo "ok    build/${f}"
+        else
+            echo "FAIL  build/${f} was not built"
+            status=1
+        fi
+    done
+    # Dictionaries: librime uses the prebuilt ones in SharedSupport/build
+    # (package/prebuild_shared) when they are up to date.
+    for f in asus_zhuyin.prism.bin terra_pinyin.asus.table.bin; do
+        if [ -s "${user}/build/${f}" ]; then
+            echo "ok    build/${f}"
+        elif [ -s "${shared}/build/${f}" ]; then
+            echo "ok    build/${f} (prebuilt one in SharedSupport/build is up to date)"
         else
             echo "FAIL  build/${f} was not built"
             status=1

@@ -1,0 +1,41 @@
+#!/bin/bash
+# DaoHui: prebuild the shared data into DaoHui.app/Contents/SharedSupport/build
+# with the app's own rime_deployer, then seal the bundle again (Makefile
+# release target, after xcodebuild).
+#
+# usage: prebuild_shared <DaoHui.app>
+#
+# Stock Squirrel's postinstall runs `Squirrel --build` in SharedSupport on the
+# user's Mac, which adds files to the signed bundle (codesign --verify: "file
+# added"). librime reads SharedSupport/build as prebuilt data
+# (prebuilt_data_dir) and builds into the user folder only what a user's own
+# files change, so building here, before signing, gives the same result.
+
+set -euo pipefail
+
+app="$(cd "${1:?usage: prebuild_shared <DaoHui.app>}" && pwd)"
+shared="${app}/Contents/SharedSupport"
+work="$(mktemp -d)"
+trap 'rm -rf "${work}"' EXIT
+
+rm -rf "${shared}/build"
+# An empty user folder: only build/ is written into the bundle.
+mkdir -p "${work}/user"
+start=$(date +%s)
+"${app}/Contents/MacOS/rime_deployer" --build "${work}/user" "${shared}" "${shared}/build"
+echo "prebuild_shared: rime_deployer --build took $(( $(date +%s) - start )) s"
+for f in default.yaml asus_zhuyin.schema.yaml asus_zhuyin.prism.bin terra_pinyin.asus.table.bin; do
+    if ! [ -s "${shared}/build/${f}" ]; then
+        echo "prebuild_shared: build/${f} was not built" >&2
+        exit 1
+    fi
+done
+ls -l "${shared}/build"
+
+# Xcode signed the bundle before build/ existed. Sign the app itself again
+# (ad hoc, as Xcode's "Sign to Run Locally"; package/sign_app replaces it with
+# a Developer ID signature when DEV_ID is set); nested code is unchanged.
+codesign --force --sign - --preserve-metadata=identifier,entitlements,flags,runtime \
+    --generate-entitlement-der "${app}"
+codesign --verify --deep --strict "${app}"
+echo "prebuild_shared: ${app} sealed again"

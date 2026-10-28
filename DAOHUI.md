@@ -40,7 +40,7 @@ package scripts; the tables below list each place.
 | Package identifier (receipt) | `im.rime.inputmethod.Squirrel` | `io.github.timlin-1231.inputmethod.DaoHui` | `package/make_package`, `package/Distribution` (pkg-ref and choice ids) |
 | Package files | `Squirrel.pkg`, `Squirrel-component.pkg`, `Squirrel-<ver>.pkg` | `DaoHui.pkg`, `DaoHui-component.pkg`, `DaoHui-<ver>.pkg` | Makefile `PACKAGE`, `make_package`, `make_archive`, `.gitignore` |
 | Installer title | `Squirrel-<ver>` | `島輝 DaoHui <ver>` | `package/Distribution` |
-| `postinstall` | `killall Squirrel`; runs `Squirrel.app/Contents/MacOS/Squirrel` | `killall DaoHui`; runs `DaoHui.app/Contents/MacOS/DaoHui` (a stock Squirrel is not touched) | `scripts/postinstall` |
+| `postinstall` | `killall Squirrel`; `Squirrel --register-input-source` as root, `--build` in SharedSupport, `--enable-input-source` / `--select-input-source` via `sudo -u` | `killall DaoHui`; only `DaoHui --update-input-source` (register, disable + enable, select) via `launchctl asuser <uid> sudo -u <user>` in the login user's session; no `--build` (the shared data is prebuilt by `package/prebuild_shared`, so the bundle stays sealed). A stock Squirrel is not touched. See "Updates and the input source list" | `scripts/postinstall`, `sources/InputSource.swift` |
 | Version | `CURRENT_PROJECT_VERSION` 1.1.2 | `DAOHUI_VERSION` (CI: `1.1.2.<commits since 876adeb>`, as the Windows `0.17.4.<n>`) sets `CURRENT_PROJECT_VERSION` → `CFBundleVersion`/`CFBundleShortVersionString` and the package version; default 1.1.2 | Makefile, `make_package`, `make_archive` |
 
 ### Run-time names
@@ -97,6 +97,19 @@ an error at every launch) and 檢查新版本 does nothing. The release step rep
 4. Publish `appcast-macos.xml` at the `SUFeedURL` (`update/appcast-macos.xml` of
    rime-asus-zhuyin). Never change the key after shipping: installed copies only accept
    updates signed with it.
+
+**Updates and the input source list.** Sparkle installs the `.pkg` silently with
+`installer` as root, so the Distribution's `onConclusion="RequireLogout"` never asks for a
+logout. Installing replaces the whole bundle; on 1.1.2.14 (stock postinstall) this left
+島輝 greyed out in the input menu: it was gone from the user's `TISCreateInputSourceList`
+and from `AppleEnabledInputSources`, while the postinstall had printed "already
+registered/enabled" and "Selection succeeds" because `sudo -u` from the installer keeps
+the installer's bootstrap and its input source calls never reach the user's text input
+server. Running `--register-input-source` and `--select-input-source` by hand in the
+user's Terminal registered and selected it, but the enabled state was saved only by
+logging out and in. Since 1.1.2.17 the postinstall runs `DaoHui --update-input-source`
+through `launchctl asuser` in the login user's session: it registers unconditionally,
+turns the mode off and on (enabling is what gets saved) and selects it.
 
 ### User-visible names
 
@@ -225,10 +238,13 @@ It uses the image's default Xcode and prints its version.
    downloads librime 1.16.0 `a251145` (`rime-a251145-macOS-universal.tar.bz2` +
    `rime-deps-…`, built by librime's CI with lua, octagram and predict as separate
    dylibs, copied to `Contents/Frameworks/rime-plugins/`), Sparkle 2.6.2 and plum's
-   `:preset`; `make package` → `xcodebuild` universal Release → `DaoHui.pkg`
+   `:preset`; `make package` → `xcodebuild` universal Release →
+   `package/prebuild_shared` (the app's `rime_deployer --build` into
+   `SharedSupport/build`, then an ad hoc re-seal of the app) → `DaoHui.pkg`
    (signed, notarized and stapled only with the signing secrets).
 5. `package/check_daohui_bundle`: identity, both architectures, plugins, data, the
-   pkg payload and scripts.
+   prebuilt data, an intact signature (`codesign --verify --deep --strict`), the pkg
+   payload and the postinstall script.
 6. Artifact **`DaoHui-<version>-macOS`**: `DaoHui-<version>.pkg` and `SHA256SUMS.txt`
    (30 days).
 7. `package/smoke_daohui_rime deploy`: `rime_deployer --build` of `asus_zhuyin` with

@@ -42,6 +42,10 @@ struct SquirrelApp {
         case "--register-input-source", "--install":
           installer.register()
           return true
+        case "--update-input-source":
+          // DaoHui: scripts/postinstall, in the login user's session
+          installer.refresh()
+          return true
         case "--enable-input-source":
           if args.count > 2 {
             let modes = args[2...].map { SquirrelInstaller.InputMode(rawValue: $0) }.compactMap { $0 }
@@ -143,6 +147,8 @@ Perform actions:
   --build                    build all schemas in current directory
 Install DaoHui:
   --install, --register-input-source    register input source
+  --update-input-source                 register, enable and select again
+                                        (after an update; as the login user)
   --enable-input-source [source id...]  input source list optional
   --disable-input-source [source id...] input source list optional
   --select-input-source [source id]     input source optional
