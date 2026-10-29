@@ -215,7 +215,7 @@ The Lua is shared with Windows (`daohui-data/lua`, from the input-method reposit
 | `app_options` | Keyed by **bundle id** instead of `.exe` name (table above). The mechanism is the same: Squirrel sets each listed option on the session, Lua reads it with `get_option` |
 | Caps Lock | macOS's "Use Caps Lock to switch to and from ABC" switches the input source instead of sending Caps Lock to Rime |
 | Shift+Del / Ctrl+Del (forget a learnt word, `asus_learn.lua`) | No Delete key on Mac keyboards: fn+Delete is Delete, so Shift+fn+Delete |
-| Keep the inline text when focus leaves (Windows `keep-composition` TSF patch) | Not ported. Squirrel's `commitComposition` (called by `deactivateServer`) commits the **raw input** (`get_input`, e.g. `su3cl3`), not the converted text; upstream `52d3bc3` (after 1.1.2) touches this. Consider committing `commit_text_preview` instead |
+| Keep the inline text when focus leaves (Windows `keep-composition` TSF patch) | Since 1.1.2.20, `commitComposition` (called by the app, and by `deactivateServer`) commits the text shown inline (`commit_text_preview`, `shownText()`); stock Squirrel committed the **raw input** (`get_input`, e.g. `ji3rup wu0 cp3`). Web pages and Electron apps call it while BackSpace edits a long composition, so the keys typed replaced the whole sentence. Upstream `52d3bc3` (after 1.1.2) still commits the raw input |
 | Ctrl+punctuation (`asus_symbols.lua` assumes Weasel's key translation: Ctrl cleared, Shift kept) | Squirrel's translation of Ctrl+Shift+; etc. is unverified |
 | Tools (`rime_harness.py`, `backup_learn.py`, settings app) | Windows-only (winreg, rime.dll, WeaselServer, `HKCU\Software\DaoHui`); the settings app's LM download has no macOS counterpart yet |
 

@@ -216,10 +216,14 @@ final class SquirrelInputController: IMKInputController {
   override func commitComposition(_ sender: Any!) {
     self.client ?= sender as? IMKTextInput
     // print("[DEBUG] commitComposition: \(sender ?? "nil")")
-    //  commit raw input
+    // DaoHui: commit the text shown inline, not the raw input. The app ends
+    // the composition on a click elsewhere, on another window, and in web
+    // pages and Electron apps often while BackSpace edits it: stock Squirrel
+    // then typed the keys (ji3rup wu0 cp3) in place of 我今天很. DaoHui for
+    // Windows keeps the inline text the same way (keep-composition patch).
     if session != 0 {
       if let input = rimeAPI.get_input(session) {
-        commit(string: String(cString: input))
+        commit(string: shownText() ?? String(cString: input))
         rimeAPI.clear_composition(session)
       }
     }
@@ -281,6 +285,19 @@ final class SquirrelInputController: IMKInputController {
 }
 
 private extension SquirrelInputController {
+
+  // DaoHui: what the composition shows inline (librime's commit_text_preview:
+  // the converted text, plus the keys of an unfinished syllable in raw keys
+  // mode), or nil when there is none.
+  func shownText() -> String? {
+    var ctx = RimeContext_stdbool.rimeStructInit()
+    guard rimeAPI.get_context(session, &ctx) else { return nil }
+    defer { _ = rimeAPI.free_context(&ctx) }
+    guard let preview = ctx.commit_text_preview.map({ String(cString: $0) }), !preview.isEmpty else {
+      return nil
+    }
+    return preview
+  }
 
   func onChordTimer(_: Timer) {
     // chord release triggered by timer
