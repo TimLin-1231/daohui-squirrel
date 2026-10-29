@@ -80,8 +80,12 @@
 	<string>NSApplication</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>21600</integer>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/update/appcast-macos.xml</string>
+	<string>https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/update/appcast-macos-app.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>DAOHUI_SPARKLE_PUBLIC_KEY</string>
 	<key>TICapsLockLanguageSwitchCapable</key>

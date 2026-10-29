@@ -22,11 +22,13 @@ notification names, log folder and user folder (see [DAOHUI.md](DAOHUI.md)).
 
   * 改名為島輝，可與鼠鬚管同時安裝：不同的 bundle id
     （`io.github.timlin-1231.inputmethod.DaoHui`）、輸入法 id、程式名稱
-    `/Library/Input Methods/DaoHui.app`、安裝檔 id、通知名稱、
-    log 資料夾 `$TMPDIR/rime.daohui`，使用者資料夾為 `~/Library/DaoHui`。
+    `~/Library/Input Methods/DaoHui.app`（安裝檔裝好後搬到登入使用者的資料夾）、
+    安裝檔 id、通知名稱、log 資料夾 `$TMPDIR/rime.daohui`，使用者資料夾為
+    `~/Library/DaoHui`。
   * 內建島輝的注音方案（`asus_zhuyin`，為預設方案）、Lua 模組與詞庫，
     以及仿華碩智慧輸入法的外觀（直式候選清單、行內預覽）。
-  * 更新頻道指向島輝自己的 appcast。
+  * 更新頻道指向島輝自己的 appcast，並在背景自動更新（不需輸入密碼，
+    在沒有打字時安裝）。
 
 安裝輸入法
 ----------

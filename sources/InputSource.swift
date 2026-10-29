@@ -101,8 +101,10 @@ final class SquirrelInstaller {
   // enabled but missing from AppleEnabledInputSources, so register() and
   // enable() return early and the input method stays unusable until the next
   // login. Register unconditionally, read the list again, turn the primary
-  // mode off and on (enabling is what the text input server saves) and select it.
-  func refresh() {
+  // mode off and on (enabling is what the text input server saves) and select
+  // it. The app runs it too after Sparkle replaced the bundle, selecting only
+  // if DaoHui was the input source in use (SquirrelApplicationDelegate).
+  func refresh(select: Bool = true) {
     TISRegisterInputSource(SquirrelApp.appDir as CFURL)
     print("Registered input source from \(SquirrelApp.appDir)")
     let mode = InputMode.primary
@@ -123,8 +125,17 @@ final class SquirrelInstaller {
     }
     var error = TISEnableInputSource(inputSource)
     print("Enable \(error == noErr ? "succeeds" : "fails") for input source: \(mode.rawValue)")
+    guard select else { return }
     error = TISSelectInputSource(inputSource)
     print("Selection \(error == noErr ? "succeeds" : "fails") for input source: \(mode.rawValue)")
+  }
+
+  // DaoHui: is one of DaoHui's modes the input source in use?
+  static func daoHuiIsSelected() -> Bool {
+    guard let current = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else { return false }
+    let sourceIDRef = TISGetInputSourceProperty(current, kTISPropertyInputSourceID)
+    guard let sourceID = unsafeBitCast(sourceIDRef, to: CFString?.self) as String? else { return false }
+    return InputMode(rawValue: sourceID) != nil
   }
 
   func disable(modes: [InputMode] = []) {

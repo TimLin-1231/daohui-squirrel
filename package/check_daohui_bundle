@@ -34,6 +34,12 @@ expect InputMethodConnectionName "$(pb InputMethodConnectionName "${plist}")" Da
 expect InputMethodServerControllerClass "$(pb InputMethodServerControllerClass "${plist}")" DaoHui.SquirrelInputController
 expect InputMethodServerDelegateClass "$(pb InputMethodServerDelegateClass "${plist}")" DaoHui.SquirrelInputController
 expect SUFeedURL "$(pb SUFeedURL "${plist}")" "$(pb SUFeedURL "${root}/resources/Info.plist")"
+case "$(pb SUFeedURL "${plist}")" in
+    */appcast-macos-app.xml) ok "SUFeedURL is the app feed (appcast-macos-app.xml)" ;;
+    *) bad "SUFeedURL should end with appcast-macos-app.xml (package/make_archive)" ;;
+esac
+expect SUAutomaticallyUpdate "$(pb SUAutomaticallyUpdate "${plist}")" true
+expect SUEnableAutomaticChecks "$(pb SUEnableAutomaticChecks "${plist}")" true
 echo "info  CFBundleVersion = $(pb CFBundleVersion "${plist}")"
 key="$(pb SUPublicEDKey "${plist}")"
 if [ "${key}" = DAOHUI_SPARKLE_PUBLIC_KEY ]; then
@@ -144,6 +150,12 @@ if [ -n "${pkg}" ]; then
         else
             bad "pkg: no postinstall, or one without --update-input-source"
         fi
+        if grep -q 'Library/Input Methods' "${script}" 2>/dev/null && grep -q 'move_to_user' "${script}" 2>/dev/null; then
+            ok "pkg: postinstall moves the app to ~/Library/Input Methods"
+        else
+            bad "pkg: postinstall does not move the app to ~/Library/Input Methods"
+        fi
+        if bash -n "${script}" 2>/dev/null; then ok "pkg: postinstall parses"; else bad "pkg: postinstall has a syntax error"; fi
         if grep -q 'hostArchitectures="arm64,x86_64"' "${tmp}/x/Distribution"; then ok "pkg: hostArchitectures"; else bad "pkg: Distribution lacks hostArchitectures"; fi
         payload="${tmp}/x/DaoHui-component.pkg/Payload"
         if [ -x "${payload}/DaoHui.app/Contents/MacOS/DaoHui" ]; then

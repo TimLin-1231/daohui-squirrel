@@ -36,11 +36,11 @@ package scripts; the tables below list each place.
 | `InputMethodConnectionName` | `Squirrel_Connection` | `DaoHui_Connection` | Info.plist |
 | Controller / delegate class | `Squirrel.SquirrelInputController` | `$(PRODUCT_MODULE_NAME).SquirrelInputController` = `DaoHui.SquirrelInputController` (the Swift module follows `PRODUCT_NAME`) | Info.plist |
 | Product, `CFBundleName`, `CFBundleExecutable` | `Squirrel.app`, `Squirrel` | `DaoHui.app`, `DaoHui` | `PRODUCT_NAME`, Info.plist, scheme `BuildableName` |
-| Install location | `/Library/Input Methods/Squirrel.app` | `/Library/Input Methods/DaoHui.app` | `DaoHuiBrand.appPath` (`SquirrelApp.appDir`, `--register-input-source`), Makefile `SQUIRREL_APP_ROOT`, `scripts/postinstall`, `package/Squirrel-component.plist`, `package/sign_app` |
+| Install location | `/Library/Input Methods/Squirrel.app` | `~/Library/Input Methods/DaoHui.app` of the login user since 1.1.2.21 (the package still installs into `/Library/Input Methods`, and `scripts/postinstall` moves it; see "Automatic updates"); `SquirrelApp.appDir` (`--register-input-source`, `--update-input-source`) is wherever the app runs from | `scripts/postinstall`, `Main.swift`; the package's `/Library/Input Methods`: Makefile `SQUIRREL_APP_ROOT`, `package/make_package`, `package/Squirrel-component.plist`, `package/sign_app` |
 | Package identifier (receipt) | `im.rime.inputmethod.Squirrel` | `io.github.timlin-1231.inputmethod.DaoHui` | `package/make_package`, `package/Distribution` (pkg-ref and choice ids) |
 | Package files | `Squirrel.pkg`, `Squirrel-component.pkg`, `Squirrel-<ver>.pkg` | `DaoHui.pkg`, `DaoHui-component.pkg`, `DaoHui-<ver>.pkg` | Makefile `PACKAGE`, `make_package`, `make_archive`, `.gitignore` |
 | Installer title | `Squirrel-<ver>` | `島輝 DaoHui <ver>` | `package/Distribution` |
-| `postinstall` | `killall Squirrel`; `Squirrel --register-input-source` as root, `--build` in SharedSupport, `--enable-input-source` / `--select-input-source` via `sudo -u` | `killall DaoHui`; only `DaoHui --update-input-source` (register, disable + enable, select) via `launchctl asuser <uid> sudo -u <user>` in the login user's session; no `--build` (the shared data is prebuilt by `package/prebuild_shared`, so the bundle stays sealed). A stock Squirrel is not touched. See "Updates and the input source list" | `scripts/postinstall`, `sources/InputSource.swift` |
+| `postinstall` | `killall Squirrel`; `Squirrel --register-input-source` as root, `--build` in SharedSupport, `--enable-input-source` / `--select-input-source` via `sudo -u` | `killall DaoHui`; moves `DaoHui.app` to the login user's `~/Library/Input Methods` (`ditto`, `chown`; left in place if that fails or nobody is logged in); `DaoHui --update-input-source` (register, disable + enable, select) via `launchctl asuser <uid> sudo -u <user>` in the login user's session; no `--build` (the shared data is prebuilt by `package/prebuild_shared`, so the bundle stays sealed). A stock Squirrel is not touched. See "Updates and the input source list" | `scripts/postinstall`, `sources/InputSource.swift` |
 | Version | `CURRENT_PROJECT_VERSION` 1.1.2 | `DAOHUI_VERSION` (CI: `1.1.2.<commits since 876adeb>`, as the Windows `0.17.4.<n>`) sets `CURRENT_PROJECT_VERSION` → `CFBundleVersion`/`CFBundleShortVersionString` and the package version; default 1.1.2 | Makefile, `make_package`, `make_archive` |
 
 ### Run-time names
@@ -71,13 +71,14 @@ The separate user folder means a stock Squirrel and DaoHui never share
 
 | What | Stock Squirrel | DaoHui |
 |---|---|---|
-| `SUFeedURL` | `https://rime.github.io/release/squirrel/appcast.xml` | `https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/update/appcast-macos.xml` |
+| `SUFeedURL` | `https://rime.github.io/release/squirrel/appcast.xml` | `https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/update/appcast-macos-app.xml` (the `.zip`; 1.1.2.20 and older read `appcast-macos.xml`, the `.pkg`) |
+| Automatic updates | asks before installing | `SUEnableAutomaticChecks`, `SUAutomaticallyUpdate`, `SUScheduledCheckInterval` 21600 (6 h); installed without asking (below) |
 | `SUPublicEDKey` | Squirrel's EdDSA key | placeholder `DAOHUI_SPARKLE_PUBLIC_KEY` |
-| Appcasts written by `make_archive` | `appcast.xml`, `testing-appcast.xml`, `debug-appcast.xml` | `appcast-macos.xml` (the testing channel uses the same feed, as on Windows), `debug-appcast.xml` |
-| Download URL in the appcast | `github.com/rime/squirrel/releases/download/<ver>/Squirrel-<ver>.pkg` | `github.com/<GITHUB_REPOSITORY>/releases/download/<tag>/DaoHui-<ver>.pkg` (default repo `TimLin-1231/daohui-squirrel`, tag `v<ver>`) |
+| Appcasts written by `make_archive` | `appcast.xml`, `testing-appcast.xml`, `debug-appcast.xml` | `appcast-macos-app.xml` (`DaoHui-<ver>.zip`), `appcast-macos.xml` (`DaoHui-<ver>.pkg`; the testing channel uses the same feeds, as on Windows), `debug-appcast.xml` |
+| Download URL in the appcast | `github.com/rime/squirrel/releases/download/<ver>/Squirrel-<ver>.pkg` | `github.com/<GITHUB_REPOSITORY>/releases/download/<tag>/DaoHui-<ver>.zip` / `.pkg` (default repo `TimLin-1231/daohui-squirrel`, tag `v<ver>`) |
 
 `SUFeedURL` is the single constant: `make_archive` reads it from `resources/Info.plist`
-with PlistBuddy.
+with PlistBuddy, and writes the package feed `appcast-macos.xml` next to it.
 
 **The Sparkle key placeholder.** `resources/Info.plist` carries
 `<string>DAOHUI_SPARKLE_PUBLIC_KEY</string>` as `SUPublicEDKey`. While the built app still
@@ -91,12 +92,12 @@ an error at every launch) and 檢查新版本 does nothing. The release step rep
 2. Repository secrets: `SPARKLE_PUBLIC_ED_KEY` (the base64 public key) and
    `SPARKLE_PRIVATE_ED_KEY` (the exported private key).
 3. The workflow then runs `PlistBuddy -c "Set :SUPublicEDKey …" resources/Info.plist`
-   before building, and on `v*` tags signs the package with
-   `sign_update --ed-key-file` and attaches `appcast-macos.xml` to the release.
+   before building, and on `v*` tags signs the package and the zipped app with
+   `sign_update --ed-key-file` and attaches both appcasts to the release.
    Locally: set the key the same way before `make`, or keep the placeholder (no updates).
-4. Publish `appcast-macos.xml` at the `SUFeedURL` (`update/appcast-macos.xml` of
-   rime-asus-zhuyin). Never change the key after shipping: installed copies only accept
-   updates signed with it.
+4. Publish `appcast-macos-app.xml` at the `SUFeedURL` and `appcast-macos.xml` next to it
+   (`update/` of rime-asus-zhuyin). Never change the key after shipping: installed copies
+   only accept updates signed with it.
 
 **Updates and the input source list.** Sparkle installs the `.pkg` silently with
 `installer` as root, so the Distribution's `onConclusion="RequireLogout"` never asks for a
@@ -110,6 +111,31 @@ user's Terminal registered and selected it, but the enabled state was saved only
 logging out and in. Since 1.1.2.18 the postinstall runs `DaoHui --update-input-source`
 through `launchctl asuser` in the login user's session: it registers unconditionally,
 turns the mode off and on (enabling is what gets saved) and selects it.
+
+**Automatic updates (since 1.1.2.21).** Sparkle installs an update without asking only
+when it needs no administrator password, and a `.pkg`, or any bundle in
+`/Library/Input Methods`, always needs one (`SPUUsesSystemDomainForBundlePath`: the
+automatic driver then stops with `SUInstallationAuthorizeLaterError` and shows its
+window). So the package moves the app into the login user's `~/Library/Input Methods`
+(input methods load from either folder; the package itself still installs into
+`/Library/Input Methods`, since installing runs as root), and the app reads
+`appcast-macos-app.xml`, whose enclosure is the app zipped with
+`ditto -c -k --sequesterRsrc --keepParent` (installation type "application"). Sparkle
+accepts the ad-hoc signed update: its EdDSA signature is valid and the new app's own
+signature is intact (the workflow unzips it and runs `codesign --verify --deep --strict`);
+the designated requirements of two ad-hoc builds never match, which `SUUpdateValidator`
+allows once the EdDSA check passes. Every 6 hours Sparkle checks, downloads in the
+background and calls `updater(_:willInstallUpdateOnQuit:immediateInstallationBlock:)`:
+an input method never quits, so `SquirrelApplicationDelegate` runs the block once no key
+has reached DaoHui for 60 s and nothing is being composed
+(`SquirrelInputController.lastKeyTime`, `.composing`, checked every 30 s). Sparkle
+replaces the bundle and relaunches it; `updater(_:willInstallUpdate:)` has noted whether
+DaoHui was the input source in use, and the new version's first launch
+(`refreshInputSourceAfterUpdate`, version kept in the `DaoHuiLaunchedVersion` default)
+runs `DaoHui --update-input-source [--no-select]` in a process of its own, as the
+postinstall does after a package. Copies in `/Library/Input Methods` (1.1.2.20 and older,
+or where the move failed) read `appcast-macos.xml` (1.1.2.20 and older) and get the
+package, with the password, once more.
 
 ### User-visible names
 

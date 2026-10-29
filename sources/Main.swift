@@ -15,9 +15,10 @@ struct SquirrelApp {
   } else {
     try! FileManager.default.url(for: .libraryDirectory, in: .userDomainMask, appropriateFor: nil, create: false).appendingPathComponent(DaoHuiBrand.userDirName, isDirectory: true)
   }
-  static let appDir = DaoHuiBrand.appPath.withCString { dir in
-    URL(fileURLWithFileSystemRepresentation: dir, isDirectory: false, relativeTo: nil)
-  }
+  // DaoHui: wherever this copy runs from (stock: the fixed install path):
+  // ~/Library/Input Methods/DaoHui.app since 1.1.2.21, /Library/Input Methods
+  // before (and when the package could not move it, scripts/postinstall).
+  static let appDir = Bundle.main.bundleURL
   static let logDir = FileManager.default.temporaryDirectory.appending(component: DaoHuiBrand.logAppName, directoryHint: .isDirectory)
 
   // swiftlint:disable:next cyclomatic_complexity
@@ -43,8 +44,9 @@ struct SquirrelApp {
           installer.register()
           return true
         case "--update-input-source":
-          // DaoHui: scripts/postinstall, in the login user's session
-          installer.refresh()
+          // DaoHui: scripts/postinstall, in the login user's session; the app
+          // after a Sparkle update (--no-select: another input source was in use)
+          installer.refresh(select: !args[2...].contains("--no-select"))
           return true
         case "--enable-input-source":
           if args.count > 2 {
@@ -147,7 +149,7 @@ Perform actions:
   --build                    build all schemas in current directory
 Install DaoHui:
   --install, --register-input-source    register input source
-  --update-input-source                 register, enable and select again
+  --update-input-source [--no-select]   register, enable and select again
                                         (after an update; as the login user)
   --enable-input-source [source id...]  input source list optional
   --disable-input-source [source id...] input source list optional

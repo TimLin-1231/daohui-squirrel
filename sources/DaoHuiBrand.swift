@@ -12,7 +12,9 @@
 //    - input source / mode ids, connection name, SUFeedURL, SUPublicEDKey:
 //      resources/Info.plist (and the ids again in resources/InfoPlist.xcstrings
 //      and as enum raw values in sources/InputSource.swift)
-//    - package id and install path: package/make_package, package/Distribution
+//    - package id and install path: package/make_package, package/Distribution;
+//      scripts/postinstall moves the app to ~/Library/Input Methods, and
+//      SquirrelApp.appDir is wherever it runs from
 //
 
 import Foundation
@@ -24,8 +26,6 @@ enum DaoHuiBrand {
   static let distributionName = "島輝"
   /// User data folder `~/Library/DaoHui` (stock: `~/Library/Rime`).
   static let userDirName = "DaoHui"
-  /// Install location (stock: `/Library/Input Methods/Squirrel.app`).
-  static let appPath = "/Library/Input Methods/DaoHui.app"
   /// Log folder `$TMPDIR/rime.daohui` and glog file prefix (stock: `rime.squirrel`).
   static let logAppName = "rime.daohui"
   /// glog name of `DaoHui --build` (stock: `rime.squirrel-builder`).

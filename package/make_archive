@@ -1,13 +1,20 @@
 #! /bin/bash
 # enconding: utf-8
 #
-# DaoHui: copy package/DaoHui.pkg to DaoHui-<version>.pkg and, when a Sparkle
-# EdDSA private key is available, sign it and write the Sparkle appcast
-# (appcast-macos.xml, published at the SUFeedURL of resources/Info.plist).
+# DaoHui: copy package/DaoHui.pkg and package/DaoHui.zip (the app, zipped by
+# the CI workflow) to DaoHui-<version>.pkg / .zip and, when a Sparkle EdDSA
+# private key is available, sign them and write the two Sparkle appcasts:
+#   appcast-macos-app.xml  the .zip, at the SUFeedURL of resources/Info.plist:
+#                          read by DaoHui in ~/Library/Input Methods, which
+#                          Sparkle updates in place without a password
+#   appcast-macos.xml      the .pkg, next to it: read by DaoHui 1.1.2.20 and
+#                          older in /Library/Input Methods (the package moves
+#                          the app to ~/Library/Input Methods) and by the
+#                          settings app
 #
 # Environment (all optional):
 #   DAOHUI_VERSION            package version (default: project version)
-#   DAOHUI_RELEASE_TAG        GitHub release tag the .pkg is attached to
+#   DAOHUI_RELEASE_TAG        GitHub release tag the files are attached to
 #                             (default: v<version>)
 #   GITHUB_REPOSITORY         owner/repo of the releases (set by GitHub Actions;
 #                             default: TimLin-1231/daohui-squirrel)
@@ -23,12 +30,15 @@ source common.sh
 
 app_version="${DAOHUI_VERSION:-$(get_app_version)}"
 target_pkg="DaoHui-${app_version}.pkg"
+target_zip="DaoHui-${app_version}.zip"
 release_repo="${GITHUB_REPOSITORY:-TimLin-1231/daohui-squirrel}"
 release_tag="${DAOHUI_RELEASE_TAG:-v${app_version}}"
-download_url="https://github.com/${release_repo}/releases/download/${release_tag}/${target_pkg}"
+download_base="https://github.com/${release_repo}/releases/download/${release_tag}"
 release_notes_url="https://github.com/${release_repo}/releases/tag/${release_tag}"
-# The feed URL is defined once, in Info.plist.
+# The app's feed URL is defined once, in Info.plist; the package feed is
+# appcast-macos.xml in the same folder.
 feed_url="$(/usr/libexec/PlistBuddy -c 'Print :SUFeedURL' ../resources/Info.plist)"
+pkg_feed_url="${feed_url%/*}/appcast-macos.xml"
 
 verify_archive() {
     if ! [ -f "${target_pkg}" ]; then
@@ -41,13 +51,20 @@ verify_archive() {
 }
 
 create_archive() {
-    if [ -e "${target_pkg}" ]; then
-        echo >&2 "ERROR: target archive already exists: ${target_pkg}"
+    for target in "${target_pkg}" "${target_zip}"; do
+        if [ -e "${target}" ]; then
+            echo >&2 "ERROR: target archive already exists: ${target}"
+            exit 1
+        fi
+    done
+    if ! [ -f DaoHui.zip ]; then
+        echo >&2 "ERROR: DaoHui.zip is missing (ditto -c -k --keepParent DaoHui.app DaoHui.zip)"
         exit 1
     fi
     cp DaoHui.pkg "${target_pkg}"
+    cp DaoHui.zip "${target_zip}"
     echo 'sha256 checksum:'
-    shasum -a 256 "${target_pkg}"
+    shasum -a 256 "${target_pkg}" "${target_zip}"
 }
 
 if [ -n "${checksum}" ]; then
@@ -67,27 +84,31 @@ else
     echo "sign_update not working, skiping signing update."
     exit 0
 fi
-edSignature=$(echo $signature | awk -F'"' '{print $2}')
-length=$(echo $signature | awk -F'"' '{print $4}')
+pkg_signature="$(echo $signature | awk -F'"' '{print $2}')"
+pkg_length="$(echo $signature | awk -F'"' '{print $4}')"
+signature=$(./sign_update "${sign_args[@]}" "${target_zip}")
+zip_signature="$(echo $signature | awk -F'"' '{print $2}')"
+zip_length="$(echo $signature | awk -F'"' '{print $4}')"
 pub_date=$(date -R)
 # for the settings app (app/daohui-settings in rime-asus-zhuyin), which
 # installs a .pkg only after checking this hash
 pkg_sha256=$(shasum -a 256 "${target_pkg}" | awk '{print $1}')
+zip_sha256=$(shasum -a 256 "${target_zip}" | awk '{print $1}')
 # Shown in Sparkle's update window. Embedded rather than a
 # sparkle:releaseNotesLink: a link loads the whole GitHub page into that
 # small view. DAOHUI_RELEASE_NOTES_HTML (a short HTML fragment) overrides it.
 release_notes_html="${DAOHUI_RELEASE_NOTES_HTML:-<p>島輝 ${app_version}</p><p><a href=\"${release_notes_url}\">完整的更新說明</a></p>}"
 
-# release channel (the testing channel of DaoHui uses the same feed)
-appcast_file='appcast-macos.xml'
-
-cat > "${appcast_file}" << EOF
+# write_feed <file> <feed url> <file name> <EdDSA signature> <length> <sha256>
+# (release channel; the testing channel of DaoHui uses the same feeds)
+write_feed() {
+    cat > "$1" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"
      xmlns:daohui="https://github.com/TimLin-1231/rime-asus-zhuyin/ns/appcast">
   <channel>
     <title>【島輝】輸入法更新頻道（macOS）</title>
-    <link>${feed_url}</link>
+    <link>$2</link>
     <description>島輝 DaoHui for macOS Appcast 更新頻道</description>
     <language>zh</language>
     <item>
@@ -95,20 +116,23 @@ cat > "${appcast_file}" << EOF
       <description><![CDATA[${release_notes_html}]]></description>
       <sparkle:minimumSystemVersion>13.0.0</sparkle:minimumSystemVersion>
       <pubDate>${pub_date}</pubDate>
-      <enclosure url="${download_url}"
+      <enclosure url="${download_base}/$3"
                  sparkle:version="${app_version}"
                  sparkle:shortVersionString="${app_version}"
-                 sparkle:edSignature="${edSignature}"
+                 sparkle:edSignature="$4"
                  sparkle:os="macos"
-                 length="${length}"
+                 length="$5"
                  type="application/octet-stream"
-                 daohui:sha256="${pkg_sha256}"/>
+                 daohui:sha256="$6"/>
     </item>
   </channel>
 </rss>
 EOF
+    ls -l "$1"
+}
 
-ls -l ${appcast_file}
+write_feed appcast-macos-app.xml "${feed_url}" "${target_zip}" "${zip_signature}" "${zip_length}" "${zip_sha256}"
+write_feed appcast-macos.xml "${pkg_feed_url}" "${target_pkg}" "${pkg_signature}" "${pkg_length}" "${pkg_sha256}"
 
 # for testing appcast push locally.
 appcast_file='debug-appcast.xml'
@@ -130,8 +154,8 @@ cat > "${appcast_file}" << EOF
       <enclosure url="${download_url}"
                  sparkle:version="${app_version}"
                  sparkle:shortVersionString="${app_version}"
-                 sparkle:edSignature="${edSignature}"
-                 length="${length}"
+                 sparkle:edSignature="${pkg_signature}"
+                 length="${pkg_length}"
                  type="application/octet-stream"/>
     </item>
   </channel>

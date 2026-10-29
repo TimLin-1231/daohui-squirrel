@@ -128,7 +128,16 @@ jobs:
         run: |
           mkdir -p dist
           cp package/DaoHui.pkg "dist/DaoHui-${DAOHUI_VERSION}.pkg"
-          shasum -a 256 dist/*.pkg | tee dist/SHA256SUMS.txt
+          # The app zipped for Sparkle's in-place updates (appcast-macos-app.xml):
+          # the copy unzipped from it must keep an intact signature.
+          ditto -c -k --sequesterRsrc --keepParent "${APP}" package/DaoHui.zip
+          cp package/DaoHui.zip "dist/DaoHui-${DAOHUI_VERSION}.zip"
+          unzipped="$(mktemp -d)"
+          ditto -x -k package/DaoHui.zip "${unzipped}"
+          codesign --verify --deep --strict --verbose=1 "${unzipped}/DaoHui.app"
+          echo "zipped DaoHui.app $(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "${unzipped}/DaoHui.app/Contents/Info.plist")"
+          rm -rf "${unzipped}"
+          shasum -a 256 dist/*.pkg dist/*.zip | tee dist/SHA256SUMS.txt
 
       - name: Upload the package
         uses: actions/upload-artifact@v6
@@ -157,8 +166,9 @@ jobs:
           SPARKLE_ED_KEY_FILE="${key}" bash package/make_archive
           rm -f "${key}"
           test -s package/appcast-macos.xml
-          cp package/appcast-macos.xml dist/
-          echo "Publish dist/appcast-macos.xml at the SUFeedURL of Info.plist."
+          test -s package/appcast-macos-app.xml
+          cp package/appcast-macos.xml package/appcast-macos-app.xml dist/
+          echo "Publish dist/appcast-macos-app.xml at the SUFeedURL of Info.plist, dist/appcast-macos.xml next to it."
 
       - name: GitHub release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -176,7 +186,7 @@ jobs:
           cat > "${RUNNER_TEMP}/notes.md" <<EOF
           島輝 DaoHui for macOS ${DAOHUI_VERSION}, based on Squirrel (鼠鬚管) ${DAOHUI_UPSTREAM_VERSION} by the RIME team.
 
-          - Universal (Apple silicon and Intel), macOS 13 or later; installs /Library/Input Methods/DaoHui.app next to any stock Squirrel.
+          - Universal (Apple silicon and Intel), macOS 13 or later; the package installs DaoHui.app into ~/Library/Input Methods of the logged-in user (next to any stock Squirrel), where it then updates itself in the background (DaoHui-*.zip).
           - ${signing}
           - Installing adds and selects 島輝 for the logged-in user. If it stays greyed out or missing, log out and in, then add 島輝 in System Settings > Keyboard > Input Sources.
           - Built from ${GITHUB_SHA} by ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}

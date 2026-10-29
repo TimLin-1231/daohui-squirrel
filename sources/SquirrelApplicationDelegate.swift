@@ -9,7 +9,7 @@ import UserNotifications
 import Sparkle
 import AppKit
 
-final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUStandardUserDriverDelegate, UNUserNotificationCenterDelegate {
+final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUUpdaterDelegate, SPUStandardUserDriverDelegate, UNUserNotificationCenterDelegate {
   static let rimeWikiURL = URL(string: "https://github.com/rime/home/wiki")!
   static let updateNotificationIdentifier = DaoHuiBrand.updateNotificationIdentifier
   static let notificationIdentifier = DaoHuiBrand.notificationIdentifier
@@ -24,9 +24,10 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
   // This object is the user driver's delegate (upstream passes nil, so the
   // methods below never ran): an input method is an accessory app, and
   // without .regular activation Sparkle's windows open behind the front app.
+  // It is the updater's delegate too, for automatic updates (below).
   // Lazy because `self` is needed; created at launch, see
   // applicationWillFinishLaunching.
-  lazy var updateController = SPUStandardUpdaterController(startingUpdater: DaoHuiBrand.sparkleConfigured, updaterDelegate: nil, userDriverDelegate: self)
+  lazy var updateController = SPUStandardUpdaterController(startingUpdater: DaoHuiBrand.sparkleConfigured, updaterDelegate: self, userDriverDelegate: self)
   var supportsGentleScheduledUpdateReminders: Bool {
     true
   }
@@ -64,6 +65,62 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUSta
     panel = SquirrelPanel(position: .zero)
     addObservers()
     _ = updateController  // start the updater (scheduled checks) at launch
+    refreshInputSourceAfterUpdate()
+  }
+
+  // DaoHui: automatic updates. Sparkle checks every few hours, downloads an
+  // update in the background (SUAutomaticallyUpdate) and, when it can install
+  // without an administrator password (the app in ~/Library/Input Methods,
+  // moved there by scripts/postinstall), hands the installation over here. An
+  // input method never quits, so it is installed once no key has been typed
+  // for a while and nothing is being composed; Sparkle then relaunches the new
+  // version. (In /Library/Input Methods the update needs the password, and
+  // Sparkle shows its window instead.)
+  private static let installIdleSeconds: TimeInterval = 60
+  private static let launchedVersionKey = "DaoHuiLaunchedVersion"
+  private static let reselectKey = "DaoHuiReselectAfterUpdate"
+  private var installTimer: Timer?
+
+  func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem, immediateInstallationBlock immediateInstallHandler: @escaping () -> Void) -> Bool {
+    print("Update \(item.displayVersionString) downloaded; installing once nothing is typed")
+    installTimer?.invalidate()
+    installTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] timer in
+      let idle = ProcessInfo.processInfo.systemUptime - SquirrelInputController.lastKeyTime
+      guard idle >= Self.installIdleSeconds && !SquirrelInputController.composing else { return }
+      timer.invalidate()
+      self?.installTimer = nil
+      immediateInstallHandler()
+    }
+    return true
+  }
+
+  func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
+    // For the new version's first launch (refreshInputSourceAfterUpdate).
+    UserDefaults.standard.set(SquirrelInstaller.daoHuiIsSelected(), forKey: Self.reselectKey)
+  }
+
+  // Replacing the bundle leaves a stale, greyed out entry in the user's input
+  // sources (scripts/postinstall does this after a package install): at the
+  // first launch of another version, register, enable and, if DaoHui was in
+  // use when the update was installed, select it again. In a process of its
+  // own, as the package does, once this one has started its server.
+  private func refreshInputSourceAfterUpdate() {
+    let defaults = UserDefaults.standard
+    let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+    let last = defaults.string(forKey: Self.launchedVersionKey)
+    let reselect = defaults.object(forKey: Self.reselectKey) as? Bool ?? true
+    defaults.set(version, forKey: Self.launchedVersionKey)
+    defaults.removeObject(forKey: Self.reselectKey)
+    // (No record yet: the first launch after a package install, whose
+    // postinstall did this already.)
+    guard let last, last != version, let executable = Bundle.main.executableURL else { return }
+    print("Updated from \(last) to \(version); refreshing the input source")
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      let task = Process()
+      task.executableURL = executable
+      task.arguments = reselect ? ["--update-input-source"] : ["--update-input-source", "--no-select"]
+      try? task.run()
+    }
   }
 
   func applicationWillTerminate(_ notification: Notification) {

@@ -10,6 +10,11 @@ import InputMethodKit
 final class SquirrelInputController: IMKInputController {
   private static let keyRollOver = 50
   private static var unknownAppCnt: UInt = 0
+  // DaoHui: a downloaded update is installed while nothing is being typed
+  // (SquirrelApplicationDelegate): when the last key arrived (system uptime),
+  // and whether the composition last shown has anything in it.
+  static var lastKeyTime: TimeInterval = 0
+  static var composing = false
 
   private weak var client: IMKTextInput?
   private let rimeAPI: RimeApi_stdbool = rime_get_api_stdbool().pointee
@@ -92,6 +97,7 @@ final class SquirrelInputController: IMKInputController {
       rimeUpdate()
 
     case .keyDown:
+      Self.lastKeyTime = ProcessInfo.processInfo.systemUptime
       // ignore Command+X hotkeys.
       if modifiers.contains(.command) {
         break
@@ -465,6 +471,7 @@ private extension SquirrelInputController {
 
     var ctx = RimeContext_stdbool.rimeStructInit()
     if rimeAPI.get_context(session, &ctx) {
+      Self.composing = ctx.composition.length > 0
       // update preedit text
       let preedit = ctx.composition.preedit.map({ String(cString: $0) }) ?? ""
 
@@ -557,6 +564,7 @@ private extension SquirrelInputController {
                 page: page, lastPage: lastPage)
       _ = rimeAPI.free_context(&ctx)
     } else {
+      Self.composing = false
       hidePalettes()
     }
   }
@@ -566,6 +574,7 @@ private extension SquirrelInputController {
     // print("[DEBUG] commitString: \(string)")
     client.insertText(string, replacementRange: .empty)
     preedit = ""
+    Self.composing = false
     hidePalettes()
   }
 
