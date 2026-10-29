@@ -12,7 +12,8 @@
 #       sequences into asus_zhuyin with an empty user folder: the Lua scripts
 #       run on macOS's librime-lua. Fails if librime cannot start or the
 #       schema cannot be selected; prints what the schema shows and any Lua
-#       errors from the log.
+#       errors from the log. Also fails if BackSpace after finished
+#       syllables leaves the typed keys showing instead of Chinese.
 
 set -euo pipefail
 
@@ -83,6 +84,31 @@ keys)
         echo "ok    你好 is offered for su3cl3"
     else
         echo "warn  你好 not offered for su3cl3"
+    fi
+    # BackSpace after finished syllables deletes one character at a time
+    # (lua/asus_keys.lua); what is left must still show as Chinese, not as
+    # the keys typed (seen on a Mac with 1.1.2.18).
+    echo "--- BackSpace"
+    perl -e 'alarm 900; exec @ARGV' "${tool}" "${shared}" "${work}/user" "${work}/log" asus_zhuyin \
+        'ji3rup wu0 cp3cl3' '{BackSpace}' '{BackSpace}' '{BackSpace}' '{Escape}' \
+        'su3cl3a87' '{BackSpace}' '{BackSpace}' '{Escape}' \
+        '5k4ek7jp4wu6' '{BackSpace}' '{BackSpace}' '{Escape}' \
+        'su3cl' '{BackSpace}' '{BackSpace}' '{Escape}' > "${work}/backspace.out" || status=$?
+    cat "${work}/backspace.out"
+    if ls "${work}/log"/*.ERROR* > /dev/null 2>&1; then
+        echo "--- errors logged by librime after BackSpace (last 40 lines)"
+        tail -40 "${work}/log"/*.ERROR*
+    fi
+    # The first three words end with a tone key at every step: no keys shown.
+    keys_shown="$(awk -F'\t' '$1 == "su3cl" { stop = 1 }
+        !stop && $1 == "{BackSpace}" && $2 == "preview" && $3 ~ /[A-Za-z0-9]/' \
+        "${work}/backspace.out" | head -6)"
+    if [ -n "${keys_shown}" ]; then
+        echo "FAIL  keys shown after BackSpace:"
+        echo "${keys_shown}"
+        status=1
+    else
+        echo "ok    BackSpace leaves Chinese"
     fi
     exit "${status}"
     ;;

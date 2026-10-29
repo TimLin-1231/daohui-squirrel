@@ -7,8 +7,9 @@
  * usage: rime_keys <shared data dir> <user data dir> <log dir> <schema id>
  *                  <key sequence>...
  * Each key sequence (librime syntax, e.g. "su3cl3" or "{Escape}") is typed
- * into the same session; after each one the commit (if any), the preedit
- * and the candidates are printed, one per line, prefixed by the sequence.
+ * into the same session; after each one the commit (if any), the input, the
+ * preedit, the inline preview and the candidates are printed, one per line,
+ * prefixed by the sequence.
  *
  * Build: clang -o rime_keys tools/rime_keys.c -I librime/src \
  *          -L <DaoHui.app>/Contents/Frameworks -lrime.1 \
@@ -67,7 +68,9 @@ int main(int argc, char* argv[]) {
     }
     RIME_STRUCT(RimeContext, context);
     if (rime->get_context(session, &context)) {
+      printf("%s\tinput\t%s\n", keys, str(rime->get_input(session)));
       printf("%s\tpreedit\t%s\n", keys, str(context.composition.preedit));
+      printf("%s\tpreview\t%s\n", keys, str(context.commit_text_preview));
       for (int j = 0; j < context.menu.num_candidates; ++j) {
         printf("%s\t%d\t%s\t%s\n", keys, j + 1,
                str(context.menu.candidates[j].text),
