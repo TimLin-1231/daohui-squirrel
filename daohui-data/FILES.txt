@@ -7,6 +7,8 @@ lua\asus_compact.lua
 lua\asus_edit.lua
 lua\asus_email.lua
 lua\asus_english.lua
+lua\asus_fix.lua
+lua\asus_fix_data.lua
 lua\asus_grammar.lua
 lua\asus_keys.lua
 lua\asus_lang.lua

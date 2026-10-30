@@ -124,6 +124,7 @@ final class SquirrelApplicationDelegate: NSObject, NSApplicationDelegate, SPUUpd
   }
 
   func applicationWillTerminate(_ notification: Notification) {
+    DaoHuiAI.shared.stop()  // the Ctrl+R model server
     // swiftlint:disable:next notification_center_detachment
     NotificationCenter.default.removeObserver(self)
     DistributedNotificationCenter.default().removeObserver(self)

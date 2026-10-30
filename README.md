@@ -29,6 +29,9 @@ notification names, log folder and user folder (see [DAOHUI.md](DAOHUI.md)).
     以及仿華碩智慧輸入法的外觀（直式候選清單、行內預覽）。
   * 更新頻道指向島輝自己的 appcast，並在背景自動更新（不需輸入密碼，
     在沒有打字時安裝）。
+  * AI 修正：組字時按 Ctrl+R，由本機的語言模型（llama.cpp + Qwen3.5-4B，
+    從輸入法選單「下載 AI 修正模型」取得）修正同音錯字、按錯鍵的字與
+    的／得／地；Enter 送出修正，Esc 回到原句。文字不會離開這台 Mac。
 
 安裝輸入法
 ----------

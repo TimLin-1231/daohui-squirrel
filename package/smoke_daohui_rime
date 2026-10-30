@@ -110,6 +110,28 @@ keys)
     else
         echo "ok    BackSpace leaves Chinese"
     fi
+    # Ctrl+R (lua/asus_fix.lua) with rime_keys answering as DaoHuiAI.swift
+    # would: the IME shows 應用城市 for these keys; the correction must be
+    # shown (it reads as typed: ReverseLookup, OpenCC s2tw) and committed.
+    echo "--- Ctrl+R"
+    want='請重新啟動應用程式'
+    perl -e 'alarm 900; exec @ARGV' "${tool}" "${shared}" "${work}/user" "${work}/log" asus_zhuyin \
+        '@opt:_asus_fix=1' 'fu/3tj/6vup fu32j/4u/4m/4t/6g4' '{Control+r}' "@answer:${want}" '{Return}' \
+        > "${work}/fix.out" || status=$?
+    grep -v $'\t[0-9]*\t' "${work}/fix.out" || true
+    shown="$(awk -F'\t' '$1 ~ /^@answer:/ && $2 == "preview" { print $3 }' "${work}/fix.out")"
+    committed="$(awk -F'\t' '$1 == "{Return}" && $2 == "commit" { print $3 }' "${work}/fix.out")"
+    if [ "${shown}" = "${want}" ] && [ "${committed}" = "${want}" ]; then
+        echo "ok    Ctrl+R: the correction is shown and Enter commits it"
+    else
+        echo "FAIL  Ctrl+R: shown '${shown}', committed '${committed}', want '${want}'"
+        status=1
+    fi
+    if ls "${work}/log"/*.ERROR* > /dev/null 2>&1 && grep -q "asus_fix" "${work}/log"/*.ERROR*; then
+        echo "FAIL  Lua errors from asus_fix:"
+        grep "asus_fix" "${work}/log"/*.ERROR* | tail -5
+        status=1
+    fi
     exit "${status}"
     ;;
 *)

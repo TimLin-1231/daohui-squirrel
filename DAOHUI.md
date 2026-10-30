@@ -244,6 +244,36 @@ The Lua is shared with Windows (`daohui-data/lua`, from the input-method reposit
 | Keep the inline text when focus leaves (Windows `keep-composition` TSF patch) | Since 1.1.2.20, `commitComposition` (called by the app, and by `deactivateServer`) commits the text shown inline (`commit_text_preview`, `shownText()`); stock Squirrel committed the **raw input** (`get_input`, e.g. `ji3rup wu0 cp3`). Web pages and Electron apps call it while BackSpace edits a long composition, so the keys typed replaced the whole sentence. Upstream `52d3bc3` (after 1.1.2) still commits the raw input |
 | Ctrl+punctuation (`asus_symbols.lua` assumes Weasel's key translation: Ctrl cleared, Shift kept) | Squirrel's translation of Ctrl+Shift+; etc. is unverified |
 | Tools (`rime_harness.py`, `backup_learn.py`, settings app) | Windows-only (winreg, rime.dll, WeaselServer, `HKCU\Software\DaoHui`); the settings app's LM download has no macOS counterpart yet |
+| AI correction, Ctrl+R (`asus_fix.lua`) | **macOS first** (since 1.1.2.22); Windows has no front-end part yet, so Ctrl+R is left alone there. See below |
+
+### AI correction (Ctrl+R)
+
+While composing, Ctrl+R asks a local language model to correct the sentence (wrong
+homophones, characters spoiled by a slipped key, 的/得/地, 在/再); the correction is shown
+as the whole composition, Enter commits it, Esc goes back. The work is split:
+
+- `asus_fix.lua` (input-method repository, shared with Windows) builds the
+  chat-completions request, puts `<id>\t<JSON>` in the session property
+  `asus_fix_request`, and on the key **F23** (`0xFFD4`) reads `<id>\t<answer>` from
+  `asus_fix_result`, tidies it and keeps it only if it still reads as the keys typed
+  (`ReverseLookup` of `terra_pinyin.asus`, `asus_fix_data.lua`), keeps English words and
+  numbers, never swaps 他/她 or 你/您, and has no simplified characters (`s2tw.json`).
+  Lua only asks when the front end set the option `_asus_fix`.
+- `SquirrelInputController` sets `_asus_fix` on every session, and after each key
+  (`takeFixRequest`) empties a waiting request and hands it to `DaoHuiAI`; the answer
+  (or `!message` for the bubble) comes back on the main queue, is put in
+  `asus_fix_result` and F23 is processed for that session.
+- `DaoHuiAI.swift` runs llama.cpp's `llama-server` (b11559, `127.0.0.1:8739`, Metal,
+  `--reasoning off`) on Qwen3.5-4B Q4_K_M, started at the first Ctrl+R (up to 180 s for
+  the first load) and stopped after 10 minutes unused or when DaoHui quits. Both come
+  from the input menu item 「下載 AI 修正模型（約 2.8 GB）…」 into `~/Library/DaoHui/ai/`
+  (pinned URLs, SHA-256 checked, the archive unpacked with `tar`, quarantine removed).
+  The server's output goes to `$TMPDIR/rime.daohui/llama-server.log`.
+  `NSAllowsLocalNetworking` in Info.plist lets URLSession reach `http://127.0.0.1`.
+
+Measured in the input-method repository (`tools/eval_fix.py --ime-rescore`, the Lua
+guard as shipped): held-out, 544 → 583 of 720 sentences right (40 fixed, 1 broken).
+Not verified on a Mac: model load time and answer time with Metal, memory use.
 
 ## Building
 

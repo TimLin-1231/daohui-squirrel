@@ -121,6 +121,7 @@ final class SquirrelInputController: IMKInputController {
           let rimeModifiers = SquirrelKeycode.osxModifiersToRime(modifiers: modifiers)
           handled = processKey(rimeKeycode, modifiers: rimeModifiers)
           rimeUpdate()
+          takeFixRequest()
         }
       }
 
@@ -249,6 +250,12 @@ final class SquirrelInputController: IMKInputController {
     wiki.target = self
     let update = NSMenuItem(title: NSLocalizedString("Check for updates...", comment: "Menu item"), action: #selector(checkForUpdates), keyEquivalent: "")
     update.target = self
+    // DaoHui: the model behind Ctrl+R (DaoHuiAI.swift).
+    let ai = DaoHuiAI.shared
+    let aiTitle = ai.ready ? "AI 修正：已就緒（打字時按 Ctrl+R）"
+      : ai.downloading ? "AI 修正模型下載中…" : "下載 AI 修正模型（約 2.8 GB）…"
+    let aiItem = NSMenuItem(title: aiTitle, action: (ai.ready || ai.downloading) ? nil : #selector(downloadAIModel), keyEquivalent: "")
+    aiItem.target = self
 
     let menu = NSMenu()
     menu.addItem(deploy)
@@ -257,8 +264,13 @@ final class SquirrelInputController: IMKInputController {
     menu.addItem(setting)
     menu.addItem(wiki)
     menu.addItem(update)
+    menu.addItem(aiItem)
 
     return menu
+  }
+
+  @objc func downloadAIModel() {
+    DaoHuiAI.shared.download()
   }
 
   @objc func deploy() {
@@ -367,7 +379,30 @@ private extension SquirrelInputController {
     schemaId = ""
 
     if session != 0 {
+      // DaoHui: this front end answers Ctrl+R (lua/asus_fix.lua, takeFixRequest).
+      rimeAPI.set_option(session, "_asus_fix", true)
       updateAppOptions()
+    }
+  }
+
+  // DaoHui: a Ctrl+R request left by lua/asus_fix.lua ("<id>\t<JSON body>") is
+  // taken (emptied), asked of the model (DaoHuiAI) and answered through
+  // asus_fix_result ("<id>\t<answer>") and the key F23, for this session.
+  func takeFixRequest() {
+    let size = 1 << 16
+    var buffer = [CChar](repeating: 0, count: size)
+    guard session != 0, rimeAPI.get_property(session, "asus_fix_request", &buffer, size) else { return }
+    let request = String(cString: buffer)
+    guard let tab = request.firstIndex(of: "\t") else { return }
+    rimeAPI.set_property(session, "asus_fix_request", "")
+    let id = String(request[..<tab])
+    let body = Data(request[request.index(after: tab)...].utf8)
+    let session = self.session
+    DaoHuiAI.shared.ask(body: body) { [weak self] answer in
+      guard let self, self.session == session, self.rimeAPI.find_session(session) else { return }
+      self.rimeAPI.set_property(session, "asus_fix_result", "\(id)\t\(answer)")
+      _ = self.processKey(0xFFD4, modifiers: 0)  // XK_F23
+      self.rimeUpdate()
     }
   }
 

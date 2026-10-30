@@ -11,11 +11,18 @@
  * preedit, the inline preview and the candidates are printed, one per line,
  * prefixed by the sequence.
  *
+ * Two pseudo sequences play DaoHui's front end for Ctrl+R (lua/asus_fix.lua,
+ * sources/DaoHuiAI.swift):
+ *   @opt:<name>=0|1   sets an option (e.g. @opt:_asus_fix=1)
+ *   @answer:<text>    takes the request in asus_fix_request, answers <text>
+ *                     through asus_fix_result and presses F23
+ *
  * Build: clang -o rime_keys tools/rime_keys.c -I librime/src \
  *          -L <DaoHui.app>/Contents/Frameworks -lrime.1 \
  *          -Wl,-rpath,<DaoHui.app>/Contents/Frameworks
  */
 #include <stdio.h>
+#include <string.h>
 
 #include <rime_api.h>
 
@@ -56,7 +63,31 @@ int main(int argc, char* argv[]) {
   int status = 0;
   for (int i = 5; i < argc; ++i) {
     const char* keys = argv[i];
-    if (!rime->simulate_key_sequence(session, keys)) {
+    if (strncmp(keys, "@opt:", 5) == 0 && strchr(keys, '=')) {
+      char name[256];
+      size_t n = (size_t)(strchr(keys, '=') - (keys + 5));
+      if (n >= sizeof name) n = sizeof name - 1;
+      memcpy(name, keys + 5, n);
+      name[n] = '\0';
+      rime->set_option(session, name, strchr(keys, '=')[1] == '1');
+      continue;
+    }
+    if (strncmp(keys, "@answer:", 8) == 0) {
+      static char request[1 << 16];
+      char result[8192];
+      if (!rime->get_property(session, "asus_fix_request", request, sizeof request) ||
+          !strchr(request, '\t')) {
+        printf("%s\trequest\t(none)\n", keys);
+        status = 1;
+        continue;
+      }
+      *strchr(request, '\t') = '\0'; /* now the id */
+      printf("%s\trequest\t%s\n", keys, request);
+      snprintf(result, sizeof result, "%s\t%s", request, keys + 8);
+      rime->set_property(session, "asus_fix_request", "");
+      rime->set_property(session, "asus_fix_result", result);
+      rime->process_key(session, 0xFFD4, 0); /* XK_F23 */
+    } else if (!rime->simulate_key_sequence(session, keys)) {
       fprintf(stderr, "rime_keys: bad key sequence %s\n", keys);
       status = 1;
       continue;
