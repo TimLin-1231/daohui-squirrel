@@ -145,6 +145,19 @@ keys)
         echo "FAIL  Ctrl+R: 程序 was not refused: shown '${shown}', the IME showed '${ime}'"
         status=1
     fi
+    # An answer that changes nothing is followed by a second request (any
+    # tone), answered as DaoHuiAI.swift would after F23.
+    perl -e 'alarm 900; exec @ARGV' "${tool}" "${shared}" "${work}/user" "${work}/log" asus_zhuyin \
+        '@opt:_asus_fix=1' "${keys}" '{Control+r}' "@answer:${ime}" "@answer:${want}" '{Return}' \
+        > "${work}/fix3.out" || status=$?
+    committed="$(awk -F'\t' '$1 == "{Return}" && $2 == "commit" { print $3 }' "${work}/fix3.out")"
+    if [ "${committed}" = "${want}" ]; then
+        echo "ok    Ctrl+R: an unchanged answer is asked again; the second answer is committed"
+    else
+        echo "FAIL  Ctrl+R second request: committed '${committed}', want '${want}'"
+        grep $'\trequest\t' "${work}/fix3.out" || true
+        status=1
+    fi
     if ls "${work}/log"/*.ERROR* > /dev/null 2>&1 && grep -q "asus_fix" "${work}/log"/*.ERROR*; then
         echo "FAIL  Lua errors from asus_fix:"
         grep "asus_fix" "${work}/log"/*.ERROR* | tail -5

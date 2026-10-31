@@ -388,6 +388,8 @@ private extension SquirrelInputController {
   // DaoHui: a Ctrl+R request left by lua/asus_fix.lua ("<id>\t<JSON body>") is
   // taken (emptied), asked of the model (DaoHuiAI) and answered through
   // asus_fix_result ("<id>\t<answer>") and the key F23, for this session.
+  // F23 may leave a second request (an answer that changed nothing is asked
+  // again, any tone): taken the same way.
   func takeFixRequest() {
     let size = 1 << 16
     var buffer = [CChar](repeating: 0, count: size)
@@ -403,6 +405,7 @@ private extension SquirrelInputController {
       self.rimeAPI.set_property(session, "asus_fix_result", "\(id)\t\(answer)")
       _ = self.processKey(0xFFD4, modifiers: 0)  // XK_F23
       self.rimeUpdate()
+      self.takeFixRequest()
     }
   }
 

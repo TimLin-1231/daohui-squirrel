@@ -244,7 +244,7 @@ The Lua is shared with Windows (`daohui-data/lua`, from the input-method reposit
 | Keep the inline text when focus leaves (Windows `keep-composition` TSF patch) | Since 1.1.2.20, `commitComposition` (called by the app, and by `deactivateServer`) commits the text shown inline (`commit_text_preview`, `shownText()`); stock Squirrel committed the **raw input** (`get_input`, e.g. `ji3rup wu0 cp3`). Web pages and Electron apps call it while BackSpace edits a long composition, so the keys typed replaced the whole sentence. Upstream `52d3bc3` (after 1.1.2) still commits the raw input |
 | Ctrl+punctuation (`asus_symbols.lua` assumes Weasel's key translation: Ctrl cleared, Shift kept) | Squirrel's translation of Ctrl+Shift+; etc. is unverified |
 | Tools (`rime_harness.py`, `backup_learn.py`, settings app) | Windows-only (winreg, rime.dll, WeaselServer, `HKCU\Software\DaoHui`); the settings app's LM download has no macOS counterpart yet |
-| AI correction, Ctrl+R (`asus_fix.lua`) | **macOS first** (since 1.1.2.22); Windows has no front-end part yet, so Ctrl+R is left alone there. See below |
+| AI correction, Ctrl+R (`asus_fix.lua`) | macOS since 1.1.2.22, Windows since 0.17.4.9; each front end asks the model itself. See below |
 
 ### AI correction (Ctrl+R)
 
@@ -262,7 +262,9 @@ as the whole composition, Enter commits it, Esc goes back. The work is split:
 - `SquirrelInputController` sets `_asus_fix` on every session, and after each key
   (`takeFixRequest`) empties a waiting request and hands it to `DaoHuiAI`; the answer
   (or `!message` for the bubble) comes back on the main queue, is put in
-  `asus_fix_result` and F23 is processed for that session.
+  `asus_fix_result` and F23 is processed for that session. Then it looks for a request
+  again: when an answer changed nothing, Lua asks once more while handling F23 (any
+  tone, held to each syllable's characters by a grammar: 一血 → 一些; since 1.1.2.24).
 - `DaoHuiAI.swift` runs llama.cpp's `llama-server` (b11559, `127.0.0.1:8739`, Metal,
   `--reasoning off`) on Qwen3.5-4B Q4_K_M, started at the first Ctrl+R (up to 180 s for
   the first load) and stopped after 10 minutes unused or when DaoHui quits. Both come
@@ -271,8 +273,10 @@ as the whole composition, Enter commits it, Esc goes back. The work is split:
   The server's output goes to `$TMPDIR/rime.daohui/llama-server.log`.
   `NSAllowsLocalNetworking` in Info.plist lets URLSession reach `http://127.0.0.1`.
 
-Measured in the input-method repository (`tools/eval_fix.py --ime-rescore`, the Lua
-guard as shipped): held-out, 544 → 583 of 720 sentences right (40 fixed, 1 broken).
+Measured in the input-method repository (`tools/eval_fix.py --ime-rescore --two-pass`,
+both requests through the Lua as shipped, Qwen3.5-4B): held-out, 576 → 644 of 820
+sentences right (72 fixed, 4 broken), tone slips 32 → 62 of 100; median 209 ms on a
+Windows PC for both requests.
 Not verified on a Mac: model load time and answer time with Metal, memory use.
 
 ## Building
