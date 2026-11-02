@@ -38,7 +38,18 @@ notification names, log folder and user folder (see [DAOHUI.md](DAOHUI.md)).
 
 本品適用於 macOS 13.0+
 
-安裝後請登出再登入，然後到「系統設定 › 鍵盤 › 輸入方式 › 編輯 › ＋ › 繁體中文」加入【島輝】。
+打開「終端機」，貼上這一行，按 return：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/install/mac.sh | bash
+```
+
+它會把島輝裝到 `~/Library/Input Methods`、加入並選用輸入法，再下載語言模型到
+`~/Library/DaoHui`。不需要密碼，也不會被 Gatekeeper 擋下。每一步的說明、
+遇到問題怎麼辦、怎麼移除：[安裝教學](https://github.com/TimLin-1231/rime-asus-zhuyin/blob/main/docs/install.md)。
+
+也可以下載 Releases 裡的 `DaoHui-*.pkg`（沒有簽章：打開一次被擋下後，到「系統設定 ›
+隱私權與安全性」按「強制打開」）。用 pkg 安裝時沒有語言模型，之後再執行上面那一行補上。
 
 使用輸入法
 ----------

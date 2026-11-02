@@ -186,6 +186,14 @@ jobs:
           cat > "${RUNNER_TEMP}/notes.md" <<EOF
           島輝 DaoHui for macOS ${DAOHUI_VERSION}, based on Squirrel (鼠鬚管) ${DAOHUI_UPSTREAM_VERSION} by the RIME team.
 
+          **安裝**：打開「終端機」，貼上下面這一行，按 return（不用密碼、不會被系統擋下，語言模型也一起裝好）。已經裝過的 Mac 會自動更新，不用做任何事。
+
+          \`\`\`bash
+          curl -fsSL https://raw.githubusercontent.com/TimLin-1231/rime-asus-zhuyin/main/install/mac.sh | bash
+          \`\`\`
+
+          每一步的說明、遇到問題、移除：https://github.com/TimLin-1231/rime-asus-zhuyin/blob/main/docs/install.md
+
           - Universal (Apple silicon and Intel), macOS 13 or later; the package installs DaoHui.app into ~/Library/Input Methods of the logged-in user (next to any stock Squirrel), where it then updates itself in the background (DaoHui-*.zip).
           - ${signing}
           - Installing adds and selects 島輝 for the logged-in user. If it stays greyed out or missing, log out and in, then add 島輝 in System Settings > Keyboard > Input Sources.
