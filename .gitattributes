@@ -8,3 +8,7 @@
 *.icns binary
 *.ocd2 binary
 *.gram binary
+
+# GitHub language statistics: daohui-data/ is a copy of the Windows fork's
+# built data (see DAOHUI.md), so its Lua stays out of the language bar.
+daohui-data/** linguist-vendored
